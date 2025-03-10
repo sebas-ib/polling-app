@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:3001"); // Replace with your backend URL if different
+const socket = io("http://localhost:3000"); // Replace with your backend URL if different
 
 export default function Home() {
   const [message, setMessage] = useState("");
@@ -34,7 +34,9 @@ export default function Home() {
       <div className="w-full max-w-md p-4 bg-white shadow-md rounded-lg">
         <div className="h-64 overflow-y-auto border p-2 mb-4">
           {messages.map((msg, index) => (
-            <p key={index} className="text-black">{msg}</p>
+            <p key={index} className="text-black">
+              {msg}
+            </p>
           ))}
         </div>
 
