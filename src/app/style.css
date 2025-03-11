@@ -1,0 +1,57 @@
+body {
+  font-family: sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  text-align: center;
+}
+
+input,
+button {
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  border: 1px solid #ccc;
+}
+
+.option-container {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.option-container input {
+  flex: 1;
+}
+
+.option-container button {
+  width: auto;
+  padding: 5px 10px;
+  background: red;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.option-container button:hover {
+  background: darkred;
+}
+
+button {
+  background: gray;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background: darkgrey;
+}
