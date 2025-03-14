@@ -1,101 +1,127 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { useRouter } from "next/navigation";
-import { useClient } from "./context/ClientContext"; // Adjust the path as needed
+import "./style.css";
+import { useEffect, useState } from "react";
+import io from "socket.io-client";
 
-type Poll = {
-  id: string;
-  name: string;
-};
+const socket = io("http://localhost:3000");
 
-export default function HomePage() {
-  const router = useRouter();
-  const { clientName, clientId } = useClient();
-  const [polls, setPolls] = useState<Poll[]>([]);
+export default function Home() {
+  const [question, setQuestion] = useState("");
+  const [options, setOptions] = useState(["", ""]);
+  const [pollId, setPollId] = useState<string | null>(null);
+  const [passcode, setPasscode] = useState("");
+  const [poll, setPoll] = useState<any>(null);
+  const [isPollCreated, setIsPollCreated] = useState(false);
 
-
-  // Fetch active polls on component mount
   useEffect(() => {
-    axios
-      .get("http://localhost:3001/api/polls", { withCredentials: true })
-      .then((res) => {
-        // Assuming the backend returns { polls: [...] }
-        setPolls(res.data.polls);
-      })
-      .catch((err) => {
-        console.error("Error fetching polls:", err);
-      });
-  }, []);
+    socket.on("pollCreated", ({ id, passcode }) => {
+      setPollId(id);
+      setPasscode(passcode);
+    });
 
+    socket.on("pollJoined", (pollData) => {
+      setPollId(pollData.id);
+      setPoll(pollData);
+    });
 
+    socket.on("updatePoll", (updatedPoll) => {
+      if (pollId === updatedPoll.id) {
+        setPoll(updatedPoll);
+      }
+    });
 
-  // Function to join (or create) a poll via the /join endpoint
-  const joinPoll = async (pollId: string) => {
-    try {
-      const formData = new FormData();
-      // Replace "default-client-id" with your secure client id if available (e.g. from cookie)
-      formData.append("client_name", clientName);
-      formData.append("poll_id", pollId);
+    return () => {
+      socket.off("pollCreated");
+      socket.off("pollJoined");
+      socket.off("updatePoll");
+    };
+  }, [pollId]);
 
-      await axios.post("http://localhost:3001/join", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      }).then(res => {
-      router.push(`/poll/${res.data.pollName}`);
-      })
-      ;
-      // Navigate to the poll page
-    } catch (error) {
-      console.error("Error joining poll:", error);
+  const createPoll = () => {
+    if (question.trim() && options.every((opt) => opt.trim() !== "")) {
+      socket.emit("createPoll", { question, options });
+      setIsPollCreated(true);
+      setQuestion("");
+      setOptions(["", ""]);
     }
   };
 
-  // Handler for the "Create Poll" button
-  const handleCreatePoll = () => {
-    // Redirect to the Next.js route /create (which should show a poll creation form)
-    router.push("/create");
+  const joinPoll = () => {
+    if (passcode.trim()) {
+      socket.emit("joinPoll", { passcode });
+      setIsPollCreated(false);
+      setPasscode("");
+    }
+  };
+
+  const vote = (optionIndex: number) => {
+    if (pollId) {
+      socket.emit("vote", { pollId, optionIndex });
+    }
   };
 
   return (
-    <div className="min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-4">Home Page</h1>
-      {clientName && <p className="mb-4">Hello, {clientName}!</p>}
+    <main className="container">
+      <h1>Real-Time Polls</h1>
 
-      {/* Create Poll Button */}
-      <div className="mb-6">
-        <button
-          onClick={handleCreatePoll}
-          className="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          Create Poll
-        </button>
+      <div>
+        <h2>Create a Poll</h2>
+        <input
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Poll question"
+        />
+        {options.map((opt, idx) => (
+          <div key={idx} className="option-container">
+            <input
+              type="text"
+              value={opt}
+              onChange={(e) => {
+                const updatedOptions = [...options];
+                updatedOptions[idx] = e.target.value;
+                setOptions(updatedOptions);
+              }}
+              placeholder={`Option ${idx + 1}`}
+            />
+            {options.length > 2 && (
+              <button
+                onClick={() => setOptions(options.filter((_, i) => i !== idx))}
+              >
+                Remove Option
+              </button>
+            )}
+          </div>
+        ))}
+        <button onClick={() => setOptions([...options, ""])}>Add Option</button>
+        <button onClick={createPoll}>Create Poll</button>
+        {isPollCreated && pollId && <p>Poll created! Passcode: {passcode}</p>}
       </div>
 
-      {/* Active Polls List */}
-<div className="border p-4 rounded">
-  <h2 className="text-xl mb-2">Active Polls</h2>
-  {polls.length === 0 ? (
-    <p>No active polls.</p>
-  ) : (
-    <ul className="list-disc pl-5">
-      {polls.map((poll) => (
-        <li key={poll.id} className="flex items-center mb-2">
-          <span className="mr-2">{poll.name}</span>
-          <button
-            onClick={() => router.push(`/poll/${poll.id}`)}
-            className="underline text-blue-500"
-          >
-            Join Poll
-          </button>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
+      <div>
+        <h2>Join a Poll</h2>
+        <input
+          type="text"
+          value={passcode}
+          onChange={(e) => setPasscode(e.target.value)}
+          placeholder="Enter passcode"
+        />
+        <button onClick={joinPoll}>Join Poll</button>
+      </div>
 
-
-    </div>
+      {poll && (
+        <div>
+          <h2>{poll.question}</h2>
+          <div className="poll-options">
+            {poll.options.map((option: string, index: number) => (
+              <button key={index} onClick={() => vote(index)}>
+                {option} ({poll.votes[index] || 0} votes)
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
