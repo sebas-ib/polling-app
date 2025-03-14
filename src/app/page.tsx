@@ -1,60 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import io from "socket.io-client";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import { useClient } from "./context/ClientContext"; // Adjust the path as needed
 
-const socket = io("http://localhost:3001"); // Replace with your backend URL if different
+type Poll = {
+  id: string;
+  name: string;
+};
 
-export default function Home() {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+export default function HomePage() {
+  const router = useRouter();
+  const { clientName, clientId } = useClient();
+  const [polls, setPolls] = useState<Poll[]>([]);
 
+
+  // Fetch active polls on component mount
   useEffect(() => {
-    // Listen for incoming messages
-    socket.on("message", (msg: string) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
-    return () => {
-      socket.off("message");
-    };
+    axios
+      .get("http://localhost:3001/api/polls", { withCredentials: true })
+      .then((res) => {
+        // Assuming the backend returns { polls: [...] }
+        setPolls(res.data.polls);
+      })
+      .catch((err) => {
+        console.error("Error fetching polls:", err);
+      });
   }, []);
 
-  const sendMessage = () => {
-    if (message.trim()) {
-      socket.emit("message", message);
-      setMessage(""); // Clear input field
+
+
+  // Function to join (or create) a poll via the /join endpoint
+  const joinPoll = async (pollId: string) => {
+    try {
+      const formData = new FormData();
+      // Replace "default-client-id" with your secure client id if available (e.g. from cookie)
+      formData.append("client_name", clientName);
+      formData.append("poll_id", pollId);
+
+      await axios.post("http://localhost:3001/join", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      }).then(res => {
+      router.push(`/poll/${res.data.pollName}`);
+      })
+      ;
+      // Navigate to the poll page
+    } catch (error) {
+      console.error("Error joining poll:", error);
     }
   };
 
+  // Handler for the "Create Poll" button
+  const handleCreatePoll = () => {
+    // Redirect to the Next.js route /create (which should show a poll creation form)
+    router.push("/create");
+  };
+
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold mb-4">Socket.IO Chat Test</h1>
+    <div className="min-h-screen p-4">
+      <h1 className="text-3xl font-bold mb-4">Home Page</h1>
+      {clientName && <p className="mb-4">Hello, {clientName}!</p>}
 
-      <div className="w-full max-w-md p-4 bg-white shadow-md rounded-lg">
-        <div className="h-64 overflow-y-auto border p-2 mb-4">
-          {messages.map((msg, index) => (
-            <p key={index} className="text-black">{msg}</p>
-          ))}
-        </div>
-
-        <div className="flex text-black">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Type a message..."
-            className="flex-1 border p-2 rounded-l"
-          />
-          <button
-            onClick={sendMessage}
-            className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600"
-          >
-            Send
-          </button>
-        </div>
+      {/* Create Poll Button */}
+      <div className="mb-6">
+        <button
+          onClick={handleCreatePoll}
+          className="bg-green-500 text-white px-4 py-2 rounded"
+        >
+          Create Poll
+        </button>
       </div>
-    </main>
+
+      {/* Active Polls List */}
+<div className="border p-4 rounded">
+  <h2 className="text-xl mb-2">Active Polls</h2>
+  {polls.length === 0 ? (
+    <p>No active polls.</p>
+  ) : (
+    <ul className="list-disc pl-5">
+      {polls.map((poll) => (
+        <li key={poll.id} className="flex items-center mb-2">
+          <span className="mr-2">{poll.name}</span>
+          <button
+            onClick={() => router.push(`/poll/${poll.id}`)}
+            className="underline text-blue-500"
+          >
+            Join Poll
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
+
+    </div>
   );
 }
