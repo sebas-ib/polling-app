@@ -6,7 +6,7 @@ from typing import Set
 class Client:
     id: str  # unique identifier
     name: str
-
+    saved_votes: Set[str] = field(default_factory=set)
     def __hash__(self):
         return hash(self.id)
 
@@ -20,6 +20,7 @@ class Client:
 class PollOption:
     id: str
     text: str
+    vote_count: int
 # keep em mutable
 
     def __hash__(self):

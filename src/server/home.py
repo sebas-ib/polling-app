@@ -8,7 +8,7 @@ from flask import request, jsonify, make_response
 from app_setup import app, socketio
 from global_state import clients, polls
 from models import Client, Poll, PollQuestion, PollOption
-
+from json_encoder import to_serializable
 
 @app.route("/api/set_name", methods=["POST"])
 def assign_client_name():
@@ -73,7 +73,6 @@ def get_client_name():
     response = make_response(jsonify("client_name", client_name))
 
 
-
 def assign_client():
     client_id = str(uuid.uuid4())
     return client_id
@@ -115,7 +114,7 @@ def create_poll():
     # Convert each option text into a PollOption object.
     # This comprehension filters out empty option strings.
     poll_options_set = {
-        PollOption(id=str(uuid.uuid4()), text=option)
+        PollOption(id=str(uuid.uuid4()), text=option, vote_count=0)
         for option in options_list if option.strip()
     }
 
@@ -152,9 +151,11 @@ def join_poll():
     # Validate required fields
     if not poll_id or not client_id:
         return "Poll and Client ID are required", 400
+    poll = polls[poll_id]
+    serializable_poll = to_serializable(poll)
+    return jsonify(serializable_poll), 200
 
-    return jsonify(asdict(polls[poll_id])), 200
-
+@app.route("/api/vote_option", methods=["POST"])
 
 # Ensure that Socket.IO event handlers are loaded
 
