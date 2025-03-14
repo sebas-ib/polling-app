@@ -1,3 +1,4 @@
+import json
 import uuid
 import socket_handlers
 
@@ -6,7 +7,7 @@ from dataclasses import asdict
 from flask import request, jsonify, make_response
 from app_setup import app, socketio
 from global_state import clients, polls
-from models import Client, Poll
+from models import Client, Poll, PollQuestion, PollOption
 
 
 @app.route("/api/set_name", methods=["POST"])
@@ -24,10 +25,10 @@ def assign_client_name():
     # Add a new entry in the global clients dictionary if it doesn't exist.
     if client_id not in clients:
         # You can use a default name, or customize it as needed.
-        clients[client_id] = Client(id=client_id, name=client_name)
+        clients[client_id] = Client(client_id, client_name)
 
     # Create a response with the client ID in JSON
-    response = make_response(jsonify({"client_name": client_name, "Result": "Success"}))
+    response = make_response(jsonify({"client_name": client_name, "Result": "Success"}), 200)
     response.set_cookie("client_name", client_name, httponly=True, samesite="Lax")
 
     return response
@@ -35,10 +36,11 @@ def assign_client_name():
 @app.route("/api/get_client", methods=["GET"])
 def get_client():
     # Retrieve client_id and client_name from the cookies.
+
     client_id = request.cookies.get("client_id", "")
     client_name = request.cookies.get("client_name", "")
     response_data = {}
-
+    newClient = False
     if client_id:
         response_data["client_id"] = client_id
         response_data["client_name"] = client_name
@@ -46,13 +48,19 @@ def get_client():
 
     if not client_id:
         client_id = assign_client()
+        newClient = True
         response_data["Result"] = "New Client"
+        response_data["client_id"] = client_id
 
     response = make_response(jsonify(response_data))
-    if not client_id:
+    if newClient:
         response.set_cookie("client_id", client_id, httponly=True, samesite="Lax")
+        clients[client_id] = Client(id=client_id, name="New Client")
 
+    if client_id not in clients:
+        clients[client_id] = Client(id=client_id, name="New Client")
     return response
+
 
 @app.route("/api/get_client_name", methods=["GET"])
 def get_client_name():
@@ -60,7 +68,7 @@ def get_client_name():
     if not client_id:
         return 404
 
-    client_name = request.cookies.get("client_name", "")
+    client_name = clients[client_id].name
 
     response = make_response(jsonify("client_name", client_name))
 
@@ -73,76 +81,80 @@ def assign_client():
 @app.route("/api/polls", methods=["GET"])
 def list_polls():
     # Build a list of poll dictionaries containing only 'id' and 'name'
-    polls_list = [{"id": poll.id, "name": poll.name} for poll in polls.values()]
+    polls_list = [{"id": poll.id, "title": poll.title} for poll in polls.values()]
     return jsonify({"polls": polls_list})
 
 
-@app.route("/create", methods=["POST"])
+@app.route("/api/create_poll", methods=["POST"])
 def create_poll():
-    # Get the client ID from the cookie
+    # client data is stored in cookies not in form
     client_id = request.cookies.get("client_id")
+    client_name = request.cookies.get("client_name")
 
-    # Get the poll name from the form data
-    poll_name = request.form.get("poll_name")
-    if not poll_name:
-        return "Poll name required", 400
+    # form data
+    poll_title = request.form.get("poll_title")
+    question_title = request.form.get("question_title")
+    options_json = request.form.get("options")
 
-    # Generate a unique poll id
+    # server side validation
+    if not poll_title or not question_title or options_json is None:
+        return "Invalid poll creation: missing required fields", 400
+
+    # convert options json to a list
+    try:
+        options_data = json.loads(options_json)
+        options_list = options_data.get("options", [])
+    except Exception as e:
+        return make_response(
+            jsonify({"error": "Invalid options JSON", "message": str(e)}), 400
+        )
+
+    # generate a unique poll id
     poll_id = str(uuid.uuid4())
 
-    # Create a new poll with the client_id as owner
-    new_poll = Poll(id=poll_id, name=poll_name, owner=client_id)
+    # Convert each option text into a PollOption object.
+    # This comprehension filters out empty option strings.
+    poll_options_set = {
+        PollOption(id=str(uuid.uuid4()), text=option)
+        for option in options_list if option.strip()
+    }
 
-    # Optionally, add the owner to the poll's clients list as well
-    new_poll.clients.add(client_id)
+    # Create a PollQuestion using the provided question_title and poll options.
+    poll_question = PollQuestion(
+        id=str(uuid.uuid4()),
+        question_title=question_title,
+        poll_options=poll_options_set
+    )
+    owner = clients[client_id]
+    # Create a new Poll with the provided title and owner from client_id.
+    new_poll = Poll(
+        id=poll_id,
+        title=poll_title,
+        owner=owner,
+        poll_questions={poll_question},
+        participants={owner}  # the owner is automatically added as a participant.
+    )
 
-    # Add the new poll to the global polls dictionary
+    # Store the new poll in the global poll dictionary.
     polls[poll_id] = new_poll
 
-    # Optionally, you can emit a socket event to refresh polls on the client side:
-    # socketio.emit("refresh_polls", {"id": poll_id, "name": poll_name}, broadcast=True)
+    # Optionally: emit a socket event to refresh polls.
+    socketio.emit("refreshPolls", {"id": poll_id, "title": poll_title})
 
-    # Return only id and name to the client
-    return jsonify({"id": poll_id, "name": poll_name}), 201
+    return jsonify({"id": poll_id, "title": poll_title}), 201
 
 
-@app.route("/join", methods=["POST"])
+@app.route("/api/join_poll", methods=["POST"])
 def join_poll():
     # Retrieve form data (assuming form-data is sent, not JSON)
     poll_id = request.form.get("poll_id")
-
+    client_id = request.cookies.get("client_id")
     # Validate required fields
     if not poll_id or not client_id:
         return "Poll and Client ID are required", 400
 
-    # Register the client if not already present
-    if client_id not in clients:
-        clients[client_id] = Client(id=client_id, name=client_name)
-
-    # Check if the poll exists
-    if poll_id not in polls:
-        # Option 1: Return error if the poll doesn't exist
-        return jsonify({"error": f"Poll with id {poll_id} not found"}), 404
-
-        # Option 2: Create a new poll automatically (uncomment the lines below)
-        # polls[poll_id] = Poll(name=f"Poll {poll_id}", id=poll_id)
-
-    # Add the client to the poll's set of clients
-    polls[poll_id].clients.add(client_id)
-
-    # Optionally, use Socket.IO to add the client to the corresponding poll:
-    #socketio.enter_room(client_id, poll_id)
-
-    # Return the updated poll information as JSON
     return jsonify(asdict(polls[poll_id])), 200
 
-    # Use Socket.IO to add the client to the poll corresponding to the poll
-    # socketio.enter_room(client_id, poll_name)
-
-    # Return a JSON response for clarity
-    # return jsonify({
-    #     "message": f"Client {client_name} with id {client_id} joined poll {poll_name}"
-    # }), 200
 
 # Ensure that Socket.IO event handlers are loaded
 

@@ -16,13 +16,13 @@ type ClientContextType = {
   clientId: string;
   setClientId: (id: string) => void;
   socket: Socket | null;
+  showPopup: boolean;
+  setShowPopup: (value: boolean) => void;
 };
 
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
 
 export function ClientProvider({ children }: { children: ReactNode }) {
-  // These values are stored on the server as HTTP-only cookies.
-  // We retrieve them via an API call.
   const [clientName, setClientName] = useState<string>("");
   const [clientId, setClientId] = useState<string>("");
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -35,7 +35,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Get client info from the server. The /get_client endpoint should read the HTTP‑only cookies.
+  // On mount, retrieve client info from the server using /api/get_client.
   useEffect(() => {
     if (typeof window !== "undefined") {
       axios
@@ -46,41 +46,48 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             setClientId(data.client_id);
             console.log("Retrieved client id:", data.client_id);
           } else {
-            // If no client_id, call /assign_client to generate one.
-            console.log("No client id from /get_client, calling /assign_client");
+            // If no client_id is returned, call /api/set_name with the client_name from context.
+            console.log(
+              "No client id from /api/get_client, calling /api/set_name with client_name:",
+              clientName
+            );
+            const formData = new FormData();
+            formData.append("client_name", clientName);
             axios
-              .get("http://localhost:3001/api/assign_client", { withCredentials: true })
+              .post("http://localhost:3001/api/set_name", formData, {
+                withCredentials: true,
+              })
               .then((res2) => {
                 const newClientId = res2.data.client_id;
                 if (newClientId) {
                   setClientId(newClientId);
                   console.log("Assigned new client id:", newClientId);
                 } else {
-                  console.error("No client_id returned from /assign_client");
+                  console.error("No client_id returned from /api/set_name");
                 }
               })
               .catch((error) => {
-                console.error("Error calling /assign_client:", error);
+                console.error("Error calling /api/set_name:", error);
               });
           }
 
-          // If client_name is provided by /get_client, update state.
           if (data.client_name) {
             setClientName(data.client_name);
             console.log("Retrieved client name:", data.client_name);
           } else {
-            // If client_name is missing, trigger popup.
-            setShowPopup(true);
             console.log("No client name; showing popup");
+            setShowPopup(true);
           }
           setLoading(false);
         })
         .catch((error) => {
-          console.error("Error calling /get_client:", error);
+          console.error("Error calling /api/get_client:", error);
           setLoading(false);
+          // In case of error, show the popup.
+          setShowPopup(true);
         });
     }
-  }, []);
+  }, [clientName]);
 
   // Establish socket connection after clientId is available.
   useEffect(() => {
@@ -94,14 +101,22 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     }
   }, [clientId]);
 
-  // Prevent rendering until we are mounted and loading is complete.
+  // Avoid rendering until mounted and finished loading.
   if (!mounted || loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <ClientContext.Provider
-      value={{ clientName, setClientName, clientId, setClientId, socket }}
+      value={{
+        clientName,
+        setClientName,
+        clientId,
+        setClientId,
+        socket,
+        showPopup,
+        setShowPopup,
+      }}
     >
       {children}
       {showPopup && <ClientNamePopup onClose={() => setShowPopup(false)} />}
@@ -150,7 +165,6 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
   );
 }
 
-// Simple inline style for the popup (adjust as needed)
 const popupStyle: React.CSSProperties = {
   position: "fixed",
   top: "30%",

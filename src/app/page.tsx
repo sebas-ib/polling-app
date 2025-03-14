@@ -1,127 +1,98 @@
 "use client";
 
-import "./style.css";
 import { useEffect, useState } from "react";
-import io from "socket.io-client";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import { useClient } from "./context/ClientContext"; // Adjust path as needed
 
-const socket = io("http://localhost:3000");
+type Poll = {
+  id: string;
+  title: string;
+};
 
-export default function Home() {
-  const [question, setQuestion] = useState("");
-  const [options, setOptions] = useState(["", ""]);
-  const [pollId, setPollId] = useState<string | null>(null);
-  const [passcode, setPasscode] = useState("");
-  const [poll, setPoll] = useState<any>(null);
-  const [isPollCreated, setIsPollCreated] = useState(false);
+export default function HomePage() {
+  const router = useRouter();
+  const { clientName, setShowPopup, socket } = useClient();
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Function to fetch polls
+  const fetchPolls = () => {
+    axios
+      .get("http://localhost:3001/api/polls", { withCredentials: true })
+      .then((res) => {
+        setPolls(res.data.polls);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching polls:", err);
+        setLoading(false);
+      });
+  };
+
+  // Listen for the refresh event from the socket.
   useEffect(() => {
-    socket.on("pollCreated", ({ id, passcode }) => {
-      setPollId(id);
-      setPasscode(passcode);
-    });
-
-    socket.on("pollJoined", (pollData) => {
-      setPollId(pollData.id);
-      setPoll(pollData);
-    });
-
-    socket.on("updatePoll", (updatedPoll) => {
-      if (pollId === updatedPoll.id) {
-        setPoll(updatedPoll);
-      }
-    });
-
+    if (socket) {
+      socket.on("refreshPolls", () => {
+        console.log("Refresh polls event received from socket");
+        fetchPolls();
+      });
+    }
     return () => {
-      socket.off("pollCreated");
-      socket.off("pollJoined");
-      socket.off("updatePoll");
+      if (socket) {
+        socket.off("refreshPolls");
+      }
     };
-  }, [pollId]);
+  }, [socket]);
 
-  const createPoll = () => {
-    if (question.trim() && options.every((opt) => opt.trim() !== "")) {
-      socket.emit("createPoll", { question, options });
-      setIsPollCreated(true);
-      setQuestion("");
-      setOptions(["", ""]);
-    }
-  };
 
-  const joinPoll = () => {
-    if (passcode.trim()) {
-      socket.emit("joinPoll", { passcode });
-      setIsPollCreated(false);
-      setPasscode("");
-    }
-  };
+  // Initial fetch on component mount.
+  useEffect(() => {
+    fetchPolls();
+  }, []);
 
-  const vote = (optionIndex: number) => {
-    if (pollId) {
-      socket.emit("vote", { pollId, optionIndex });
-    }
-  };
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <main className="container">
-      <h1>Real-Time Polls</h1>
+    <main className="min-h-screen p-4">
+      <h1 className="text-3xl font-bold mb-4">Join a Poll</h1>
+      <p className="mb-4">Hello, {clientName || "Guest"}!</p>
+      <button
+        onClick={() => setShowPopup(true)}
+        className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
+      >
+        Change Name
+      </button>
 
-      <div>
-        <h2>Create a Poll</h2>
-        <input
-          type="text"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Poll question"
-        />
-        {options.map((opt, idx) => (
-          <div key={idx} className="option-container">
-            <input
-              type="text"
-              value={opt}
-              onChange={(e) => {
-                const updatedOptions = [...options];
-                updatedOptions[idx] = e.target.value;
-                setOptions(updatedOptions);
-              }}
-              placeholder={`Option ${idx + 1}`}
-            />
-            {options.length > 2 && (
-              <button
-                onClick={() => setOptions(options.filter((_, i) => i !== idx))}
-              >
-                Remove Option
-              </button>
-            )}
-          </div>
-        ))}
-        <button onClick={() => setOptions([...options, ""])}>Add Option</button>
-        <button onClick={createPoll}>Create Poll</button>
-        {isPollCreated && pollId && <p>Poll created! Passcode: {passcode}</p>}
-      </div>
-
-      <div>
-        <h2>Join a Poll</h2>
-        <input
-          type="text"
-          value={passcode}
-          onChange={(e) => setPasscode(e.target.value)}
-          placeholder="Enter passcode"
-        />
-        <button onClick={joinPoll}>Join Poll</button>
-      </div>
-
-      {poll && (
-        <div>
-          <h2>{poll.question}</h2>
-          <div className="poll-options">
-            {poll.options.map((option: string, index: number) => (
-              <button key={index} onClick={() => vote(index)}>
-                {option} ({poll.votes[index] || 0} votes)
-              </button>
+      <div className="mt-6">
+        <h2 className="text-xl mb-2">Active Polls</h2>
+        {polls.length === 0 ? (
+          <p>No active polls available.</p>
+        ) : (
+          <ul className="list-disc pl-5">
+            {polls.map((poll) => (
+              <li key={poll.id} className="flex items-center mb-2">
+                <span className="mr-2">{poll.title}</span>
+                <button
+                  onClick={() => router.push(`/poll/${poll.id}`)}
+                  className="underline text-blue-500"
+                >
+                  Join Poll
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
-      )}
+          </ul>
+        )}
+      </div>
+
+      <button
+        onClick={() => router.push("/create")}
+        className="mt-4 bg-green-500 text-white px-4 py-2 rounded"
+      >
+        Create New Poll
+      </button>
     </main>
   );
 }

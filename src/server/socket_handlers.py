@@ -14,7 +14,7 @@ def handle_connect():
 
     socket_client_map[socket_id] = client_id
 
-    print(f"Socket connected: {socket_id}")
+    print(f"Socket connected with valid socket id: {socket_id}, which maps to {socket_client_map[socket_id]}")
     # socketio.emit('message', {'client_name': 'System', 'message': f'Connected as {client_id}'}, room=client_id)
 
 @socketio.on('disconnect')
@@ -48,7 +48,7 @@ def handle_message(data):
 def handle_disconnect():
     client_id = request.sid
     for poll in polls.values():
-        poll.clients.discard(client_id)
+        poll.participants.discard(client_id)
     if client_id in clients:
         print(f"Socket disconnected: {clients[client_id].name} ({client_id})")
         del clients[client_id]
