@@ -150,15 +150,15 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
 
   return (
     <div style={popupStyle}>
-      <h2>Please set your display name</h2>
+      <h2 style={headerStyle}>Please set your display name</h2>
       <input
         type="text"
         placeholder="Enter your name"
         value={nameInput}
         onChange={(e) => setNameInput(e.target.value)}
-        style={{ padding: "8px", marginBottom: "8px" }}
+        style={inputStyle}
       />
-      <button onClick={handleSubmit} style={{ padding: "8px 16px" }}>
+      <button onClick={handleSubmit} style={buttonStyle}>
         Submit
       </button>
     </div>
@@ -167,14 +167,45 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
 
 const popupStyle: React.CSSProperties = {
   position: "fixed",
-  top: "30%",
+  top: "50%",
   left: "50%",
-  transform: "translate(-50%, -30%)",
-  backgroundColor: "white",
+  transform: "translate(-50%, -50%)",
+  backgroundColor: "#fff",
+  borderRadius: "8px",
+  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)",
+  padding: "24px",
+  zIndex: 1000,
+  width: "90%",
+  maxWidth: "400px",
+};
+
+const headerStyle: React.CSSProperties = {
+  marginBottom: "16px",
+  textAlign: "center",
+  color: "black",
+  fontSize: "20px",
+  fontWeight: "bold",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "12px",
+  color: "black",
+  marginBottom: "16px",
   border: "1px solid #ccc",
   borderRadius: "4px",
-  padding: "16px",
-  zIndex: 1000,
+  fontSize: "16px",
+};
+
+const buttonStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "12px",
+  backgroundColor: "#0070f3",
+  color: "#fff",
+  border: "none",
+  borderRadius: "4px",
+  fontSize: "16px",
+  cursor: "pointer",
 };
 
 export function useClient() {

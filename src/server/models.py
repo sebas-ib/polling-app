@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
-from typing import Set
+from typing import Dict
 
 
 @dataclass
 class Client:
     id: str  # unique identifier
     name: str
-    saved_votes: Set[str] = field(default_factory=set)
+    saved_votes: set[str] = field(default_factory=set)
+
     def __hash__(self):
         return hash(self.id)
 
@@ -21,7 +22,6 @@ class PollOption:
     id: str
     text: str
     vote_count: int
-# keep em mutable
 
     def __hash__(self):
         return hash(self.id)
@@ -36,7 +36,8 @@ class PollOption:
 class PollQuestion:
     id: str
     question_title: str
-    poll_options: Set['PollOption'] = field(default_factory=set)
+    # Use a dictionary for poll_options keyed by option id.
+    poll_options: Dict[str, PollOption] = field(default_factory=dict)
 
     def __hash__(self):
         return hash(self.id)
@@ -49,10 +50,10 @@ class PollQuestion:
 
 @dataclass
 class Poll:
-    id: str   # id for poll
+    id: str  # id for poll
     title: str
-    owner: Client  # owner is a client id
+    owner: Client  # owner is a Client object
     max_participants: int = 24
-    participants: Set[Client] = field(default_factory=set)  # clients in poll
-    poll_questions: Set[PollQuestion] = field(default_factory=set)
-
+    # Use dictionaries for easier lookups.
+    participants: Dict[str, Client] = field(default_factory=dict)
+    poll_questions: Dict[str, PollQuestion] = field(default_factory=dict)
