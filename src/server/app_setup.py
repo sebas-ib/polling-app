@@ -11,6 +11,6 @@ CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize Firestore
-cred = credentials.Certificate("/Users/sebastian/Documents/project/polling-app/src/server/private-key/polling-app-882ec-firebase-adminsdk-fbsvc-3c08c94340.json")
+cred = credentials.Certificate("Your path to firestore private key goes here")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
