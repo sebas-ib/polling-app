@@ -1,3 +1,27 @@
+# Real-Time Polling App
+
+A full-stack web application that allows users to create and participate in real-time polls. Built with Next.js, TypeScript, Tailwind CSS, and Firebase, this app offers a seamless and responsive user experience.
+
+## Live Demo
+
+Try it out: _Live demo comming soon!_
+
+
+## Features
+
+- **Real-Time Voting** — Results update instantly across clients
+- **Cookie-Based Auth** — Secure user login/logout handled via Flask sessions
+- **Create Custom Polls** — Authenticated users can create polls or muliti-question quizzes
+- **Responsive UI** — Fully mobile-friendly interface
+
+## Tech Stack
+
+- **Frontend:** [Next.js](https://nextjs.org), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/)
+- **Backend (API + Auth):** [Flask](https://flask.palletsprojects.com/) with cookie-based sessions
+- **Database:** [Firebase Firestore](https://firebase.google.com/docs/firestore)
+- **Real-time Updates:** [Socket.IO](https://socket.io/) for poll result updates
+- **Deployment:** [Vercel](https://vercel.com) (Frontend) + Render/Fly.io/Other (Backend)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
