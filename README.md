@@ -6,8 +6,6 @@ A full-stack web application that allows users to create and participate in real
 
 Try it out: _Live demo coming soon!_
 
-
-
 ## Features
 
 - **Real-Time Voting** — Results update instantly across clients
@@ -27,16 +25,31 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+1. Clone git repo
+
+2. Create virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+3. Install needed packages:
+```bash
+npm install next react react-dom
+pip install -r path-to/requirements.txt
+```
+
+4. Flask config:
+```bash
+Interpreter: venv
+Environment Varibales: FLASK_APP=src/server/home.py;FLASK_ENV=development;FLASK_DEBUG=1;FLASK_RUN_PORT=3001
+Working directory: path-to/polling-app
+```
+
 First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
