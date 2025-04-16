@@ -4,7 +4,7 @@ A full-stack web application that allows users to create and participate in real
 
 ## Live Demo
 
-Try it out: _Live demo comming soon!_
+Try it out: _Live demo coming soon!_
 
 
 ## Features
