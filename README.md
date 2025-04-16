@@ -1,10 +1,11 @@
-# Real-Time Polling App
+# Real-Time Polling App _*Work in progress*_
 
 A full-stack web application that allows users to create and participate in real-time polls. Built with Next.js, TypeScript, Tailwind CSS, and Firebase, this app offers a seamless and responsive user experience.
 
 ## Live Demo
 
 Try it out: _Live demo coming soon!_
+
 
 
 ## Features
