@@ -43,4 +43,4 @@ next-env.d.ts
 # .gitignore
 __pycache__/
 *.pyc
-src/server/private-key/
+src/server/polling-app-882ec-firebase-adminsdk-fbsvc-9d68ebcb5a.json

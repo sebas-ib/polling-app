@@ -2,6 +2,7 @@ from flask import request
 from app_setup import socketio, db
 from firebase_admin import firestore
 
+
 @socketio.on('connect')
 def handle_connect():
     """

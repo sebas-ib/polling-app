@@ -1,5 +1,8 @@
 Werkzeug==2.2.3
 Flask==2.2.5
 Flask-SocketIO==5.3.3
-eventlet==0.33.0
-flask-cors
+flask-cors==3.0.10
+firebase-admin==6.3.0
+gunicorn==21.2.0
+eventlet==0.33.3
+dnspython<2.3.0
