@@ -126,7 +126,6 @@ def register_app_routes(app, db, socketio):
         polls_list = [{"id": poll.id, "title": poll.to_dict()["title"]} for poll in polls_ref]
         return jsonify({"polls": polls_list})
 
-
     @app.route("/api/create_poll", methods=["POST"])
     def create_poll():
         """

@@ -1,0 +1,13 @@
+ServiceName: polling-app-service
+SourceConfiguration:
+  AuthenticationConfiguration:
+    AccessRoleArn: arn:aws:iam::686728032722:role/apprunner-ecr-role
+  ImageRepository:
+    ImageIdentifier: 686728032722.dkr.ecr.us-west-2.amazonaws.com/polling-app:v1
+    ImageRepositoryType: ECR
+    ImageConfiguration:
+      Port: "5000"
+InstanceConfiguration:
+  Cpu: "1024"      # 1 vCPU
+  Memory: "2048"   # 2 GB RAM
+

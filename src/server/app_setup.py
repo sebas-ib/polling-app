@@ -18,11 +18,16 @@ def create_app():
     app.config['SECRET_KEY'] = 'your_secret_key'
     CORS(app, supports_credentials=True)
     # Initialize Firebase
-    cred_path = os.path.join(os.path.dirname(__file__), "polling-app-882ec-firebase-adminsdk-fbsvc-9d68ebcb5a.json")
+    cred_path = os.path.join(os.path.dirname(__file__), "polling-app-882ec-firebase-adminsdk-fbsvc-5234e61f54.json")
     print(cred_path)
     cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
-
+    try:
+        firebase_admin.initialize_app(cred, {
+            'projectId': 'polling-app-882ec'
+        })
+        print("Firebase initialized successfully.")
+    except Exception as e:
+        print("Firebase initialization failed:", e)
     global db
     db = firestore.client()
     socketio.init_app(app)
