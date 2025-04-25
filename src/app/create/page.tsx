@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { useClient } from "../context/ClientContext";
+import apiClient from '@/app/lib/api'
 
 export default function CreatePollPage() {
   const router = useRouter();
@@ -11,7 +12,6 @@ export default function CreatePollPage() {
     { question_title: "", options: ["", ""] },
   ]);
   const [loading, setLoading] = useState(false);
-
   const addQuestion = () => {
     setQuestions([...questions, { question_title: "", options: ["", ""] }]);
   };
@@ -37,9 +37,9 @@ export default function CreatePollPage() {
     formData.append("questions", JSON.stringify(questions));
 
     setLoading(true);
-    axios.post("http://localhost:3001/api/create_poll", formData, {
-      withCredentials: true,
-    })
+      apiClient.post("/api/create_poll", formData, {
+        withCredentials: true,
+      })
       .then(() => router.push("/"))
       .catch(err => console.error("Poll creation failed", err))
       .finally(() => setLoading(false));

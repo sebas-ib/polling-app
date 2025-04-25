@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import io, { Socket } from "socket.io-client";
-import axios from "axios";
+import apiClient from '@/app/lib/api'
 
 type ClientContextType = {
   clientName: string;
@@ -38,8 +38,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
   // On mount, retrieve client info from the server using /api/get_client.
   useEffect(() => {
     if (typeof window !== "undefined") {
-      axios
-        .get("http://localhost:3001/api/get_client", { withCredentials: true })
+      apiClient
+        .get("/api/get_client", { withCredentials: true })
         .then((res) => {
           const data = res.data; // expected: { client_id, client_name }
           if (data.client_id) {
@@ -53,8 +53,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             );
             const formData = new FormData();
             formData.append("client_name", clientName);
-            axios
-              .post("http://localhost:3001/api/set_name", formData, {
+            apiClient
+              .post("/api/set_name", formData, {
                 withCredentials: true,
               })
               .then((res2) => {
@@ -92,7 +92,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
   // Establish socket connection after clientId is available.
   useEffect(() => {
     if (clientId) {
-      const newSocket = io("http://localhost:3001", { withCredentials: true });
+      const newSocket = io(process.env.NEXT_PUBLIC_API_URL!, { withCredentials: true });
       setSocket(newSocket);
       console.log("Socket connected with clientId:", clientId);
       return () => {
@@ -132,8 +132,8 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
     if (!nameInput.trim()) return;
     const formData = new FormData();
     formData.append("client_name", nameInput);
-    axios
-      .post("http://localhost:3001/api/set_name", formData, { withCredentials: true })
+    apiClient
+      .post("api/set_name", formData, { withCredentials: true })
       .then((res) => {
         if (res.data.Result === "Success") {
           setClientName(nameInput);

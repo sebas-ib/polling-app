@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
+// next.config.ts
+
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  reactStrictMode: true,
+  env: {
+    PUBLIC_API_URL: process.env.PUBLIC_API_URL!,
+  },
+}
 
-export default nextConfig;
+export default nextConfig
