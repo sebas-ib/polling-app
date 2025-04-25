@@ -1,7 +1,7 @@
-"use client"; // required for client-side hooks like useState, useEffect, useParams
+"use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation"; // useParams replaces `params` from props
+import { useRouter, useParams } from "next/navigation";
 import axios from "axios";
 import { useClient } from "@/app/context/ClientContext";
 
@@ -15,44 +15,41 @@ type PollOption = {
 type PollQuestion = {
   id: string;
   question_title: string;
-  poll_options: { [key: string]: PollOption };
-};
-
-type ClientInfo = {
-  id: string;
-  name: string;
+  poll_options: { [optionKey: string]: PollOption };
 };
 
 type PollData = {
   id: string;
   title: string;
-  max_participants: number;
-  owner: ClientInfo;
-  participants: { [key: string]: ClientInfo };
-  poll_questions: { [key: string]: PollQuestion };
+  poll_questions: { [questionId: string]: PollQuestion };
+  participants: { [clientId: string]: boolean };
+  owner_id: string;
 };
 
 export default function PollPage() {
-  // replaces props.params: useParams is apparently the correct way to access route params in a client component
   const params = useParams();
-  const pollName = params.pollName as string;
+  const pollId = params.pollName as string;
 
   const router = useRouter();
   const { socket } = useClient();
-  const [poll, setPoll] = useState<PollData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasVoted, setHasVoted] = useState(false);
 
-  // fetch poll details when component mounts
+  const [poll, setPoll] = useState<PollData | null>(null);
+  const [hasVotedMap, setHasVotedMap] = useState<{ [questionId: string]: string }>({});
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchPoll = async () => {
       try {
         const formData = new FormData();
-        formData.append("poll_id", pollName);
+        formData.append("poll_id", pollId);
         const res = await axios.post("http://localhost:3001/api/join_poll", formData, {
           withCredentials: true,
         });
-        setPoll(res.data);
+
+        setPoll(res.data.poll);
+
+        const savedVotes = res.data.saved_votes || {};
+        setHasVotedMap(savedVotes); // { question_id: option_id }
       } catch (error) {
         console.error("Error fetching poll:", error);
       } finally {
@@ -61,115 +58,118 @@ export default function PollPage() {
     };
 
     fetchPoll();
-  }, [pollName]);
+  }, [pollId]);
 
-  // handles incoming real-time vote updates
   useEffect(() => {
-    if (socket) {
-      const handleVoteEvent = (data: any) => {
-        console.log("Vote event received:", data);
-        setPoll((prevPoll) => {
-          if (!prevPoll) return prevPoll;
-          const questionKeys = Object.keys(prevPoll.poll_questions);
-          if (questionKeys.length === 0) return prevPoll;
+    if (!socket || !poll) return;
 
-          const qKey = questionKeys[0];
-          const question = prevPoll.poll_questions[qKey];
+    const handleVoteEvent = (data: any) => {
+      console.log("Vote event received:", data);
 
-          if (!(data.option_id in question.poll_options)) {
-            console.warn("Option not found for vote event", data.option_id);
-            return prevPoll;
+      setPoll((prevPoll) => {
+        if (!prevPoll) return prevPoll;
+        const question = prevPoll.poll_questions[data.question_id];
+        if (!question) return prevPoll;
+
+        const previousOptionId = hasVotedMap[data.question_id];
+        const updatedOptions = { ...question.poll_options };
+
+        // Increment new option
+        const newOption = updatedOptions[data.option_id];
+        if (newOption) {
+          updatedOptions[data.option_id] = {
+            ...newOption,
+            vote_count: data.new_vote_count, // trust backend
+          };
+        }
+
+        // Decrement previous option if it exists and it's different
+        if (previousOptionId && previousOptionId !== data.option_id) {
+          const previousOption = updatedOptions[previousOptionId];
+          if (previousOption) {
+            updatedOptions[previousOptionId] = {
+              ...previousOption,
+              vote_count: Math.max(previousOption.vote_count - 1, 0),
+            };
           }
+        }
 
-          const updatedOption = {
-            ...question.poll_options[data.option_id],
-            vote_count: question.poll_options[data.option_id].vote_count + 1,
-          };
-
-          const updatedOptions = {
-            ...question.poll_options,
-            [data.option_id]: updatedOption,
-          };
-
-          const updatedQuestion = {
-            ...question,
-            poll_options: updatedOptions,
-          };
-
-          const updatedPollQuestions = {
+        return {
+          ...prevPoll,
+          poll_questions: {
             ...prevPoll.poll_questions,
-            [qKey]: updatedQuestion,
-          };
+            [data.question_id]: {
+              ...question,
+              poll_options: updatedOptions,
+            },
+          },
+        };
+      });
 
-          return {
-            ...prevPoll,
-            poll_questions: updatedPollQuestions,
-          };
-        });
-      };
+      // Update voted map locally too
+      setHasVotedMap((prev) => ({
+        ...prev,
+        [data.question_id]: data.option_id,
+      }));
+    };
 
-      socket.on("vote_event", handleVoteEvent);
-      return () => {
-        socket.off("vote_event", handleVoteEvent);
-      };
-    }
-  }, [socket]);
+    socket.on("vote_event", handleVoteEvent);
+    return () => {
+      socket.off("vote_event", handleVoteEvent);
+    };
+  }, [socket, poll, hasVotedMap]);
 
-  // cast a vote
-  const vote = async (optionId: string) => {
-    if (hasVoted || !poll) return;
+  const vote = async (questionId: string, optionKey: string) => {
     try {
-      const res = await axios.post(
-        "http://localhost:3001/api/vote_option",
+      const votePayload = [
         {
-          poll_id: poll.id,
-          question_id: Object.values(poll.poll_questions)[0].id,
-          option_id: optionId,
+          poll_id: poll?.id,
+          question_id: questionId,
+          option_id: optionKey,
         },
-        { withCredentials: true }
-      );
-      console.log("Vote successful:", res.data);
-      setHasVoted(true); // prevent double voting
-    } catch (error) {
-      console.error("Error voting:", error);
+      ];
+
+      await axios.post("http://localhost:3001/api/vote_option", votePayload, {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      });
+    } catch (err) {
+      console.error("Vote error:", err);
     }
   };
 
-  if (loading) return <div>Loading poll...</div>;
-  if (!poll) return <div>Poll not found.</div>;
-
-  const pollQuestionsArray = Object.values(poll.poll_questions);
-  if (pollQuestionsArray.length === 0) {
-    return <div>No questions available in this poll.</div>;
-  }
-
-  const question = pollQuestionsArray[0];
-  const pollOptionsArray = Object.values(question.poll_options);
+  if (loading) return <div className="p-4">Loading poll...</div>;
+  if (!poll) return <div className="p-4">Poll not found.</div>;
 
   return (
     <div className="min-h-screen p-4">
       <h1 className="text-3xl font-bold mb-4">{poll.title}</h1>
-      <h2 className="text-2xl mb-4">{question.question_title}</h2>
 
-      <div className="space-y-4">
-        {pollOptionsArray.map((option) => (
-          <div key={option.id} className="flex items-center justify-between border p-2 rounded">
-            <div>
-              <span className="font-medium">{option.text}</span>
-              <span className="ml-2 text-sm text-gray-600">({option.vote_count} votes)</span>
+      {Object.entries(poll.poll_questions).map(([questionId, question]) => (
+        <div key={questionId} className="mb-6 border p-4 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">{question.question_title}</h2>
+
+          {Object.entries(question.poll_options).map(([optionKey, option]) => (
+            <div key={optionKey} className="flex items-center justify-between border p-2 rounded mb-2">
+              <div>
+                <span className="font-medium">{option.text}</span>
+                <span className="ml-2 text-sm text-gray-600">({option.vote_count} votes)</span>
+              </div>
+              <button
+                onClick={() => vote(questionId, optionKey)}
+                disabled={hasVotedMap[questionId] === optionKey}
+                className={`px-4 py-2 rounded ${
+                  hasVotedMap[questionId] === optionKey
+                    ? "bg-green-500 text-white"
+                    : "bg-blue-500 text-white hover:bg-blue-600"
+                }`}
+              >
+                {hasVotedMap[questionId] === optionKey ? "Voted" : "Vote"}
+              </button>
             </div>
-            <button
-              onClick={() => vote(option.id)}
-              disabled={hasVoted}
-              className={`bg-blue-500 text-white px-4 py-2 rounded ml-4 ${
-                hasVoted ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-            >
-              Vote
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ))}
 
       <button
         onClick={() => router.push("/")}

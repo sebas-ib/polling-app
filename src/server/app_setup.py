@@ -18,7 +18,7 @@ def create_app():
     app.config['SECRET_KEY'] = 'your_secret_key'
     CORS(app, supports_credentials=True)
     # Initialize Firebase
-    cred_path = os.path.join(os.path.dirname(__file__), "polling-app-882ec-firebase-adminsdk-fbsvc-5234e61f54.json")
+    cred_path = os.path.join(os.path.dirname(__file__), "polling-app-882ec-firebase-adminsdk-fbsvc-b1eea8065e.json")
     print(cred_path)
     cred = credentials.Certificate(cred_path)
     try:
