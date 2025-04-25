@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useClient } from "../context/ClientContext";
 import axios from "axios";
 
 export default function CreatePollPage() {
   const router = useRouter();
-  const { clientName, socket } = useClient();
+  const { setShowPopup } = useClient();
   const [title, setTitle] = useState("");
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setShowPopup(false);
+  }, []);
   const createPoll = () => {
     if (!question.trim() || options.some((opt) => !opt.trim())) {
       alert("Please enter a poll question and non-empty options.");
@@ -41,61 +44,87 @@ export default function CreatePollPage() {
   };
 
   return (
-    <main className="min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-4">Create a New Poll</h1>
-      <div className="flex flex-col gap-4">
-        <input
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-neutral-100 px-4">
+      <div className="w-full max-w-xl bg-neutral-900 p-8 rounded-2xl shadow-lg border border-neutral-800">
+        <h1
+          className="text-4xl md:text-5xl mb-6 text-center tracking-wide text-blue-400"
+          style={{ fontFamily: "var(--font-bebas)" }}
+        >
+          CREATE A NEW POLL
+        </h1>
+
+        <div className="flex flex-col gap-4">
+          <input
             type="text"
             placeholder="Poll title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="border p-2"
-        />
-        <input
+            className="p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
             type="text"
             placeholder="Poll question"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            className="border p-2"
-        />
-        {options.map((option, index) => (
-            <div key={index} className="flex items-center gap-2">
+            className="p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          {options.map((option, index) => (
+            <div key={index} className="flex gap-2">
               <input
-                  type="text"
-                  placeholder={`Option ${index + 1}`}
-                  value={option}
-                  onChange={(e) => {
-                    const newOptions = [...options];
-                    newOptions[index] = e.target.value;
-                    setOptions(newOptions);
-                  }}
-                  className="border p-2 flex-1"
+                type="text"
+                placeholder={`Option ${index + 1}`}
+                value={option}
+                onChange={(e) => {
+                  const newOptions = [...options];
+                  newOptions[index] = e.target.value;
+                  setOptions(newOptions);
+                }}
+                className="flex-1 p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {options.length > 2 && (
-                  <button
-                      onClick={() =>
-                          setOptions(options.filter((_, i) => i !== index))
-                      }
-                      className="bg-red-500 text-white px-2 py-1"
-                  >
-                    Remove
-                  </button>
+                <button
+                  onClick={() =>
+                    setOptions(options.filter((_, i) => i !== index))
+                  }
+                  className="px-3 bg-rose-600 hover:bg-rose-700 text-white rounded"
+                >
+                  ✕
+                </button>
               )}
             </div>
-        ))}
-        <button
+          ))}
+
+          <button
             onClick={() => setOptions([...options, ""])}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Add Option
-        </button>
-        <button
+            className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded text-white"
+          >
+            ➕ Add Option
+          </button>
+
+          <button
             onClick={createPoll}
-            className="bg-green-500 text-white px-4 py-2 rounded"
             disabled={loading}
-        >
-          {loading ? "Creating Poll..." : "Create Poll"}
-        </button>
+            className="bg-emerald-500 hover:bg-emerald-600 transition px-4 py-2 rounded text-white disabled:opacity-50"
+          >
+            {loading ? "Creating Poll..." : "Create Poll"}
+          </button>
+
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => router.push("/")}
+              className="bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded text-white"
+            >
+              ← Back to Menu
+            </button>
+            <button
+              onClick={() => alert("Feature coming soon!")}
+              className="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white"
+            >
+              ➕ Add Question
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   );
