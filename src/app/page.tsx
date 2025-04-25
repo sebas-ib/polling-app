@@ -1,30 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { useRouter } from "next/navigation";
-import { useClient } from "./context/ClientContext"; // Adjust path as needed
+import { SetStateAction, useEffect, useState} from "react";
+import {useRouter} from "next/navigation";
+import {useClient} from "./context/ClientContext";
+import apiClient from '@/app/lib/api'
 
 type Poll = {
-  id: string;
-  title: string;
+    id: string;
+    title: string;
 };
 
 export default function HomePage() {
-  const router = useRouter();
-  const { clientName, setShowPopup, socket } = useClient();
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [loading, setLoading] = useState(true);
+    const router = useRouter();
+    const {clientName, setShowPopup, socket} = useClient();
+    const [polls, setPolls] = useState<Poll[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  // Function to fetch polls
-  const fetchPolls = () => {
-    axios
-      .get("http://localhost:3001/api/polls", { withCredentials: true })
-      .then((res) => {
+    // Function to fetch polls
+    const fetchPolls = () => {
+        apiClient
+            .get("/api/polls", {withCredentials: true})
+            .then((res: { data: { polls: SetStateAction<Poll[]>; }; }) => {
         setPolls(res.data.polls);
         setLoading(false);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error("Error fetching polls:", err);
         setLoading(false);
       });

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClient } from "../context/ClientContext";
-import axios from "axios";
+import apiClient from '@/app/lib/api'
 
 export default function CreatePollPage() {
   const router = useRouter();
@@ -12,7 +12,6 @@ export default function CreatePollPage() {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [loading, setLoading] = useState(false);
-
   const createPoll = () => {
     if (!question.trim() || options.some((opt) => !opt.trim())) {
       alert("Please enter a poll question and non-empty options.");
@@ -27,8 +26,8 @@ export default function CreatePollPage() {
     const optionsJSON = JSON.stringify(optionsObj);
     formData.append("options", optionsJSON);
 
-    axios
-      .post("http://localhost:3001/api/create_poll", formData, {
+    apiClient
+      .post("/api/create_poll", formData, {
         withCredentials: true,
       })
       .then((response) => {
