@@ -6,3 +6,4 @@ firebase-admin==6.3.0
 gunicorn==21.2.0
 eventlet==0.33.3
 dnspython<2.3.0
+pymongo==4.4.1

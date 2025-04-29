@@ -19,4 +19,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 # execute this
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:app"]
+CMD ["gunicorn", "--workers=4", "--timeout=60", "--bind", "0.0.0.0:5000", "wsgi:app", "eventlet"]

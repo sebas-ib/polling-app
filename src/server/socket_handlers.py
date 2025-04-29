@@ -1,52 +1,25 @@
 from flask import request
-from app_setup import socketio, db
+from app_setup import socketio, db, socket_clients
 from firebase_admin import firestore
-
 
 @socketio.on('connect')
 def handle_connect():
-    """
-    Handles a new WebSocket connection from the client.
-    Maps the socket ID to the client ID using the 'client_id' cookie.
-    Stores this mapping in Firestore under 'socket_clients'.
-    """
     client_id = request.cookies.get("client_id")
     if not client_id:
         print("Client connected without client_id cookie.")
         return
-
     socket_id = request.sid
-
-    # Store socket-to-client mapping in Firestore
-    db.collection("socket_clients").document(socket_id).set({
-        "client_id": client_id
-    })
-
+    socket_clients[socket_id] = client_id
     print(f"Socket connected: {socket_id} -> {client_id}")
-
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """
-    Handles cleanup when a socket disconnects.
-    Removes the socket-to-client mapping from Firestore.
-    Optionally logs and could trigger poll participant cleanup if needed.
-    """
     socket_id = request.sid
-
-    # Get the document that maps socket ID to client ID
-    doc_ref = db.collection("socket_clients").document(socket_id)
-    doc = doc_ref.get()
-
-    if doc.exists:
-        client_id = doc.to_dict()["client_id"]
+    client_id = socket_clients.pop(socket_id, None)
+    if client_id:
         print(f"Socket disconnected: {socket_id} (client_id: {client_id})")
-
-        # remove client from participants in any poll
-        doc_ref.delete()
     else:
         print(f"Socket disconnected: {socket_id} (no mapping found)")
-
 
 @socketio.on('message')
 def handle_message(data):
