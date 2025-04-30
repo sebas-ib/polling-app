@@ -2,32 +2,44 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useClient } from "../context/ClientContext";
-import apiClient from '@/app/lib/api'
+import axios from "axios";
+
+type Question = { question_title: string; options: string[] };
 
 export default function CreatePollPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [questions, setQuestions] = useState([
+  const [questions, setQuestions] = useState<Question[]>([
     { question_title: "", options: ["", ""] },
   ]);
   const [loading, setLoading] = useState(false);
-  const addQuestion = () => {
+
+  const addQuestion = () =>
     setQuestions([...questions, { question_title: "", options: ["", ""] }]);
-  };
 
-  const updateQuestion = (index: number, key: string, value: any) => {
-    const newQuestions = [...questions];
-    if (key === "question_title") {
-      newQuestions[index].question_title = value;
-    } else if (key === "option") {
-      newQuestions[index].options = value;
+  const updateQuestion = (
+    idx: number,
+    field: "question_title" | "options",
+    value: string | string[]
+  ) => {
+    const copy = [...questions];
+    if (field === "question_title" && typeof value === "string") {
+      copy[idx].question_title = value;
     }
-    setQuestions(newQuestions);
+    if (field === "options" && Array.isArray(value)) {
+      copy[idx].options = value;
+    }
+    setQuestions(copy);
   };
 
-  const createPoll = () => {
-    if (!title.trim() || questions.some(q => !q.question_title.trim() || q.options.some(opt => !opt.trim()))) {
+  const createPoll = async () => {
+    if (
+      !title.trim() ||
+      questions.some(
+        q =>
+          !q.question_title.trim() || q.options.some(opt => !opt.trim())
+      )
+    ) {
       alert("Please complete all questions and options.");
       return;
     }
@@ -37,12 +49,20 @@ export default function CreatePollPage() {
     formData.append("questions", JSON.stringify(questions));
 
     setLoading(true);
-      apiClient.post("/api/create_poll", formData, {
-        withCredentials: true,
-      })
-      .then(() => router.push("/"))
-      .catch(err => console.error("Poll creation failed", err))
-      .finally(() => setLoading(false));
+    try {
+      const res = await axios.post(
+        "http://localhost:5001/api/create_poll",
+        formData,
+        { withCredentials: true }
+      );
+      // Flask returns { id, title, code }
+      router.push(`/poll/${res.data.code}`);
+    } catch (err) {
+      console.error("Poll creation failed:", err);
+      alert("Failed to create poll. Check console.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,40 +72,41 @@ export default function CreatePollPage() {
         type="text"
         placeholder="Poll title"
         value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        onChange={e => setTitle(e.target.value)}
         className="border p-2 w-full mb-4"
       />
 
-      {questions.map((q, qIndex) => (
-        <div key={qIndex} className="border p-4 rounded mb-4">
+      {questions.map((q, qi) => (
+        <div key={qi} className="border p-4 rounded mb-4">
           <input
             type="text"
-            placeholder={`Question ${qIndex + 1}`}
+            placeholder={`Question ${qi + 1}`}
             value={q.question_title}
-            onChange={(e) => {
-              updateQuestion(qIndex, "question_title", e.target.value);
-            }}
+            onChange={e =>
+              updateQuestion(qi, "question_title", e.target.value)
+            }
             className="border p-2 w-full mb-2"
           />
-          {q.options.map((opt, optIndex) => (
-            <div key={optIndex} className="flex gap-2 mb-2">
+          {q.options.map((opt, oi) => (
+            <div key={oi} className="flex gap-2 mb-2">
               <input
                 type="text"
-                placeholder={`Option ${optIndex + 1}`}
+                placeholder={`Option ${oi + 1}`}
                 value={opt}
-                onChange={(e) => {
-                  const updatedOptions = [...q.options];
-                  updatedOptions[optIndex] = e.target.value;
-                  updateQuestion(qIndex, "option", updatedOptions);
+                onChange={e => {
+                  const opts = [...q.options];
+                  opts[oi] = e.target.value;
+                  updateQuestion(qi, "options", opts);
                 }}
                 className="border p-2 flex-1"
               />
               {q.options.length > 2 && (
                 <button
+                  type="button"
                   className="bg-red-500 text-white px-2"
                   onClick={() => {
-                    const updatedOptions = q.options.filter((_, i) => i !== optIndex);
-                    updateQuestion(qIndex, "option", updatedOptions);
+                    const opts = q.options.filter((_, i) => i !== oi);
+                    updateQuestion(qi, "options", opts);
                   }}
                 >
                   Remove
@@ -94,9 +115,10 @@ export default function CreatePollPage() {
             </div>
           ))}
           <button
+            type="button"
             className="bg-blue-500 text-white px-3 py-1 rounded"
             onClick={() =>
-              updateQuestion(qIndex, "option", [...q.options, ""])
+              updateQuestion(qi, "options", [...q.options, ""])
             }
           >
             Add Option
@@ -104,11 +126,16 @@ export default function CreatePollPage() {
         </div>
       ))}
 
-      <button onClick={addQuestion} className="bg-indigo-600 text-white px-4 py-2 rounded mb-4">
+      <button
+        type="button"
+        onClick={addQuestion}
+        className="bg-indigo-600 text-white px-4 py-2 rounded mb-4"
+      >
         Add Another Question
       </button>
 
       <button
+        type="button"
         onClick={createPoll}
         className="bg-green-600 text-white px-4 py-2 rounded"
         disabled={loading}

@@ -2,174 +2,189 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import axios from "axios";
+import apiClient from "@/app/lib/api";
 import { useClient } from "@/app/context/ClientContext";
 
-// ---------- Types ----------
-type PollOption = {
-  id: string;
-  text: string;
-  vote_count: number;
-};
-
+type PollOption = { id: string; text: string; vote_count: number };
 type PollQuestion = {
   id: string;
   question_title: string;
-  poll_options: { [optionKey: string]: PollOption };
+  poll_options: PollOption[];
 };
-
 type PollData = {
   id: string;
   title: string;
-  poll_questions: { [questionId: string]: PollQuestion };
-  participants: { [clientId: string]: boolean };
+  poll_questions: PollQuestion[];
+  participants: string[];
   owner_id: string;
 };
 
 export default function PollPage() {
-  const params = useParams();
-  const pollId = params.pollName as string;
-
   const router = useRouter();
-  const { socket } = useClient();
+  const { pollName: pollCode } = useParams() as { pollName: string };
+  const { socket, clientId } = useClient();
 
   const [poll, setPoll] = useState<PollData | null>(null);
-  const [hasVotedMap, setHasVotedMap] = useState<{ [questionId: string]: string }>({});
+  const [hasVotedMap, setHasVotedMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
+  // 1) Load poll data and saved votes
   useEffect(() => {
-    const fetchPoll = async () => {
-      try {
-        const formData = new FormData();
-        formData.append("poll_id", pollId);
-        const res = await axios.post("http://localhost:3001/api/join_poll", formData, {
-          withCredentials: true,
-        });
-
+    apiClient
+      .post("/api/join_poll", { poll_code: pollCode })
+      .then((res) => {
         setPoll(res.data.poll);
+        setHasVotedMap(res.data.saved_votes || {});
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [pollCode]);
 
-        const savedVotes = res.data.saved_votes || {};
-        setHasVotedMap(savedVotes); // { question_id: option_id }
-      } catch (error) {
-        console.error("Error fetching poll:", error);
-      } finally {
-        setLoading(false);
+  // 2) Join the poll room via socket
+  useEffect(() => {
+    if (!socket || !poll) return;
+    socket.emit("join_poll", { poll_id: poll.id });
+  }, [socket, poll]);
+
+  // 3) Listen for real-time vote updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handler = (data: {
+      question_id: string;
+      vote_sent_by: string;
+      client_id: string;
+      new_vote?: { option_id: string; vote_count: number };
+      old_vote?: { option_id: string; vote_count: number | null };
+    }) => {
+      console.log("[SocketIO] vote_event received:", data);
+      const { question_id, new_vote, old_vote, client_id: voteClientId } = data;
+      if (!new_vote) return;
+
+      // Update vote counts
+      setPoll((prev) =>
+        prev
+          ? {
+              ...prev,
+              poll_questions: prev.poll_questions.map((q) =>
+                q.id !== question_id
+                  ? q
+                  : {
+                      ...q,
+                      poll_options: q.poll_options.map((opt) => {
+                        if (opt.id === new_vote.option_id) {
+                          return { ...opt, vote_count: new_vote.vote_count };
+                        }
+                        if (
+                          old_vote &&
+                          old_vote.option_id === opt.id &&
+                          old_vote.vote_count !== null
+                        ) {
+                          return { ...opt, vote_count: old_vote.vote_count };
+                        }
+                        return opt;
+                      }),
+                    }
+              ),
+            }
+          : prev
+      );
+
+      // Sync vote selection across tabs for same client
+      if (voteClientId === clientId) {
+        setHasVotedMap((prev) => ({
+          ...prev,
+          [question_id]: new_vote.option_id,
+        }));
       }
     };
 
-    fetchPoll();
-  }, [pollId]);
-
-  useEffect(() => {
-    if (!socket || !poll) return;
-
-    const handleVoteEvent = (data: any) => {
-      console.log("Vote event received:", data);
-
-      setPoll((prevPoll) => {
-        if (!prevPoll) return prevPoll;
-        const question = prevPoll.poll_questions[data.question_id];
-        if (!question) return prevPoll;
-
-        const previousOptionId = hasVotedMap[data.question_id];
-        const updatedOptions = { ...question.poll_options };
-
-        // Increment new option
-        const newOption = updatedOptions[data.option_id];
-        if (newOption) {
-          updatedOptions[data.option_id] = {
-            ...newOption,
-            vote_count: data.new_vote_count, // trust backend
-          };
-        }
-
-        // Decrement previous option if it exists and it's different
-        if (previousOptionId && previousOptionId !== data.option_id) {
-          const previousOption = updatedOptions[previousOptionId];
-          if (previousOption) {
-            updatedOptions[previousOptionId] = {
-              ...previousOption,
-              vote_count: Math.max(previousOption.vote_count - 1, 0),
-            };
-          }
-        }
-
-        return {
-          ...prevPoll,
-          poll_questions: {
-            ...prevPoll.poll_questions,
-            [data.question_id]: {
-              ...question,
-              poll_options: updatedOptions,
-            },
-          },
-        };
-      });
-
-      // Update voted map locally too
-      setHasVotedMap((prev) => ({
-        ...prev,
-        [data.question_id]: data.option_id,
-      }));
-    };
-
-    socket.on("vote_event", handleVoteEvent);
+    socket.on("vote_event", handler);
     return () => {
-      socket.off("vote_event", handleVoteEvent);
+      socket.off("vote_event", handler);
     };
-  }, [socket, poll, hasVotedMap]);
+  }, [socket, clientId]);
 
-  const vote = async (questionId: string, optionKey: string) => {
-    try {
-      const votePayload = [
-        {
-          poll_id: poll?.id,
-          question_id: questionId,
-          option_id: optionKey,
-        },
-      ];
+  // 4) Cast vote and optimistically update UI
+  const vote = (qId: string, newOptId: string) => {
+    const prevOptId = hasVotedMap[qId];
+    if (prevOptId === newOptId) return;
 
-      await axios.post("http://localhost:3001/api/vote_option", votePayload, {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      });
-    } catch (err) {
-      console.error("Vote error:", err);
-    }
+    apiClient
+      .post("/api/vote_option", [
+        { poll_id: poll!.id, question_id: qId, option_id: newOptId },
+      ])
+      .catch(console.error);
+
+    // Optimistic UI update
+    setPoll((p) =>
+      p
+        ? {
+            ...p,
+            poll_questions: p.poll_questions.map((q) =>
+              q.id !== qId
+                ? q
+                : {
+                    ...q,
+                    poll_options: q.poll_options.map((opt) => {
+                      if (opt.id === newOptId)
+                        return { ...opt, vote_count: opt.vote_count + 1 };
+                      if (opt.id === prevOptId)
+                        return {
+                          ...opt,
+                          vote_count: Math.max(0, opt.vote_count - 1),
+                        };
+                      return opt;
+                    }),
+                  }
+            ),
+          }
+        : p
+    );
+
+    setHasVotedMap((m) => ({ ...m, [qId]: newOptId }));
   };
 
-  if (loading) return <div className="p-4">Loading poll...</div>;
+  if (loading) return <div className="p-4">Loading…</div>;
   if (!poll) return <div className="p-4">Poll not found.</div>;
 
   return (
     <div className="min-h-screen p-4">
       <h1 className="text-3xl font-bold mb-4">{poll.title}</h1>
 
-      {Object.entries(poll.poll_questions).map(([questionId, question]) => (
-        <div key={questionId} className="mb-6 border p-4 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">{question.question_title}</h2>
+      {poll.poll_questions.map((q) => {
+        const selected = hasVotedMap[q.id];
+        return (
+          <div key={q.id} className="mb-6 border p-4 rounded shadow">
+            <h2 className="text-xl font-semibold mb-2">{q.question_title}</h2>
 
-          {Object.entries(question.poll_options).map(([optionKey, option]) => (
-            <div key={optionKey} className="flex items-center justify-between border p-2 rounded mb-2">
-              <div>
-                <span className="font-medium">{option.text}</span>
-                <span className="ml-2 text-sm text-gray-600">({option.vote_count} votes)</span>
-              </div>
-              <button
-                onClick={() => vote(questionId, optionKey)}
-                disabled={hasVotedMap[questionId] === optionKey}
-                className={`px-4 py-2 rounded ${
-                  hasVotedMap[questionId] === optionKey
-                    ? "bg-green-500 text-white"
-                    : "bg-blue-500 text-white hover:bg-blue-600"
-                }`}
-              >
-                {hasVotedMap[questionId] === optionKey ? "Voted" : "Vote"}
-              </button>
-            </div>
-          ))}
-        </div>
-      ))}
+            {q.poll_options.map((opt) => {
+              const isSelected = selected === opt.id;
+              return (
+                <div
+                  key={opt.id}
+                  className="flex items-center justify-between border p-2 rounded mb-2"
+                >
+                  <span>
+                    {opt.text} ({opt.vote_count} votes)
+                  </span>
+                  <button
+                    onClick={() => vote(q.id, opt.id)}
+                    disabled={isSelected}
+                    className={`px-4 py-2 rounded ${
+                      isSelected
+                        ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
+                    }`}
+                  >
+                    {isSelected ? "Voted" : "Vote"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
 
       <button
         onClick={() => router.push("/")}
