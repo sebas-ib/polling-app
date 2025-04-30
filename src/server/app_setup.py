@@ -34,3 +34,8 @@ def create_app():
     register_app_routes(app, db, socketio)
 
     return app
+=======
+# Initialize Firestore
+cred = credentials.Certificate("/Users/melissatreziok/Documents/GitHub/polling-app/polling-app-882ec-firebase-adminsdk-fbsvc-833f309abd.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()

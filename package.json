@@ -10,14 +10,16 @@
   },
   "dependencies": {
     "axios": "^1.8.2",
+    "chart.js": "^4.4.9",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "navigation": "^6.2.0",
     "firebase": "^11.4.0",
     "firebase-admin": "^13.2.0",
-    "next": "^15.2.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "navigation": "^6.2.0",
+    "next": "^15.3.0",
+    "react": "^19.1.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.1.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
   },
@@ -28,5 +30,18 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "description": "A full-stack web application that allows users to create and participate in real-time polls. Built with Next.js, TypeScript, Tailwind CSS, and Firebase, this app offers a seamless and responsive user experience.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebas-ib/polling-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sebas-ib/polling-app/issues"
+  },
+  "homepage": "https://github.com/sebas-ib/polling-app#readme"
 }
