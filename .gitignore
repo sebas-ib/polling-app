@@ -44,4 +44,5 @@ next-env.d.ts
 __pycache__/
 *.pyc
 src/server/polling-app-882ec-firebase-adminsdk-fbsvc-9d68ebcb5a.json
+src/server/polling-app-882ec-firebase-adminsdk-fbsvc-833f309abd.json
 src/server/app_setup.py
