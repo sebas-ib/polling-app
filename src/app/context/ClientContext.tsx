@@ -71,11 +71,10 @@ export function ClientProvider({ children }: { children: ReactNode }) {
               });
           }
 
-          if (data.client_name) {
+          if (data.client_name && data.client_name.trim() !== "" && data.client_name !== "New Client") {
             setClientName(data.client_name);
-            console.log("Retrieved client name:", data.client_name);
           } else {
-            console.log("No client name; showing popup");
+            console.log("No valid client name found; showing popup");
             setShowPopup(true);
           }
           setLoading(false);

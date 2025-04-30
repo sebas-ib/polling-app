@@ -22,13 +22,13 @@ type PollData = {
 export default function PollPage() {
   const router = useRouter();
   const { pollName: pollCode } = useParams() as { pollName: string };
-  const { socket } = useClient();
+  const { socket, clientId } = useClient();
 
   const [poll, setPoll] = useState<PollData | null>(null);
   const [hasVotedMap, setHasVotedMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  // 1) Load poll from REST and saved votes
+  // 1) Load poll data and saved votes
   useEffect(() => {
     apiClient
       .post("/api/join_poll", { poll_code: pollCode })
@@ -40,66 +40,83 @@ export default function PollPage() {
       .finally(() => setLoading(false));
   }, [pollCode]);
 
-  // 2) Once we have both socket & poll.id, join the socket room
+  // 2) Join the poll room via socket
   useEffect(() => {
     if (!socket || !poll) return;
-    socket.emit("join_poll", poll.id);
+    socket.emit("join_poll", { poll_id: poll.id });
   }, [socket, poll]);
 
-  // 3) Listen for real-time vote events
+  // 3) Listen for real-time vote updates
   useEffect(() => {
     if (!socket) return;
+
     const handler = (data: {
       question_id: string;
-      option_id: string;
-      new_vote_count: number;
+      vote_sent_by: string;
+      client_id: string;
+      new_vote?: { option_id: string; vote_count: number };
+      old_vote?: { option_id: string; vote_count: number | null };
     }) => {
-      // patch that one question’s vote count
+      console.log("[SocketIO] vote_event received:", data);
+      const { question_id, new_vote, old_vote, client_id: voteClientId } = data;
+      if (!new_vote) return;
+
+      // Update vote counts
       setPoll((prev) =>
         prev
           ? {
               ...prev,
               poll_questions: prev.poll_questions.map((q) =>
-                q.id !== data.question_id
+                q.id !== question_id
                   ? q
                   : {
                       ...q,
-                      poll_options: q.poll_options.map((opt) =>
-                        opt.id === data.option_id
-                          ? { ...opt, vote_count: data.new_vote_count }
-                          : opt
-                      ),
+                      poll_options: q.poll_options.map((opt) => {
+                        if (opt.id === new_vote.option_id) {
+                          return { ...opt, vote_count: new_vote.vote_count };
+                        }
+                        if (
+                          old_vote &&
+                          old_vote.option_id === opt.id &&
+                          old_vote.vote_count !== null
+                        ) {
+                          return { ...opt, vote_count: old_vote.vote_count };
+                        }
+                        return opt;
+                      }),
                     }
               ),
             }
           : prev
       );
-      // if it was your own vote, update selection too
-      setHasVotedMap((m) => ({
-        ...m,
-        [data.question_id]: data.option_id,
-      }));
+
+      // Sync vote selection across tabs for same client
+      if (voteClientId === clientId) {
+        setHasVotedMap((prev) => ({
+          ...prev,
+          [question_id]: new_vote.option_id,
+        }));
+      }
     };
 
     socket.on("vote_event", handler);
     return () => {
       socket.off("vote_event", handler);
     };
-  }, [socket]);
+  }, [socket, clientId]);
 
-  // 4) Cast or switch vote, with optimistic counts
+  // 4) Cast vote and optimistically update UI
   const vote = (qId: string, newOptId: string) => {
     const prevOptId = hasVotedMap[qId];
-    if (prevOptId === newOptId) return; // no-op
+    if (prevOptId === newOptId) return;
 
-    // fire REST API
     apiClient
       .post("/api/vote_option", [
         { poll_id: poll!.id, question_id: qId, option_id: newOptId },
       ])
       .catch(console.error);
 
-    // optimistic UI: bump new, drop old
+    // Optimistic UI update
     setPoll((p) =>
       p
         ? {
@@ -124,6 +141,7 @@ export default function PollPage() {
           }
         : p
     );
+
     setHasVotedMap((m) => ({ ...m, [qId]: newOptId }));
   };
 
@@ -138,9 +156,7 @@ export default function PollPage() {
         const selected = hasVotedMap[q.id];
         return (
           <div key={q.id} className="mb-6 border p-4 rounded shadow">
-            <h2 className="text-xl font-semibold mb-2">
-              {q.question_title}
-            </h2>
+            <h2 className="text-xl font-semibold mb-2">{q.question_title}</h2>
 
             {q.poll_options.map((opt) => {
               const isSelected = selected === opt.id;

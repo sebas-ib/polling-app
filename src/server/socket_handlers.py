@@ -23,11 +23,6 @@ def handle_disconnect():
 
 @socketio.on('message')
 def handle_message(data):
-    """
-    Handles incoming chat messages via WebSocket.
-    Resolves the socket ID to a client ID, then looks up the client name.
-    Emits the message either to a specific poll room or to all clients.
-    """
     socket_id = request.sid
     message_text = data.get('message', '')
     poll_room = data.get('poll')
