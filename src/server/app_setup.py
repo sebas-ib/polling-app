@@ -11,6 +11,8 @@ socketio = SocketIO(cors_allowed_origins="*")
 mongo_client = None
 db = None
 
+socket_clients = {}
+
 def create_app():
     # Create a new flask app instance
     app = Flask(__name__)
