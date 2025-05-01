@@ -28,7 +28,6 @@ export default function PollPage() {
   const [hasVotedMap, setHasVotedMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  // 1) Load poll data and saved votes
   useEffect(() => {
     apiClient
       .post("/api/join_poll", { poll_code: pollCode })
@@ -40,13 +39,11 @@ export default function PollPage() {
       .finally(() => setLoading(false));
   }, [pollCode]);
 
-  // 2) Join the poll room via socket
   useEffect(() => {
     if (!socket || !poll) return;
     socket.emit("join_poll", { poll_id: poll.id });
   }, [socket, poll]);
 
-  // 3) Listen for real-time vote updates
   useEffect(() => {
     if (!socket) return;
 
@@ -57,11 +54,9 @@ export default function PollPage() {
       new_vote?: { option_id: string; vote_count: number };
       old_vote?: { option_id: string; vote_count: number | null };
     }) => {
-      console.log("[SocketIO] vote_event received:", data);
       const { question_id, new_vote, old_vote, client_id: voteClientId } = data;
       if (!new_vote) return;
 
-      // Update vote counts
       setPoll((prev) =>
         prev
           ? {
@@ -90,7 +85,6 @@ export default function PollPage() {
           : prev
       );
 
-      // Sync vote selection across tabs for same client
       if (voteClientId === clientId) {
         setHasVotedMap((prev) => ({
           ...prev,
@@ -105,7 +99,6 @@ export default function PollPage() {
     };
   }, [socket, clientId]);
 
-  // 4) Cast vote and optimistically update UI
   const vote = (qId: string, newOptId: string) => {
     const prevOptId = hasVotedMap[qId];
     if (prevOptId === newOptId) return;
@@ -116,7 +109,6 @@ export default function PollPage() {
       ])
       .catch(console.error);
 
-    // Optimistic UI update
     setPoll((p) =>
       p
         ? {
@@ -149,49 +141,53 @@ export default function PollPage() {
   if (!poll) return <div className="p-4">Poll not found.</div>;
 
   return (
-    <div className="min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-4">{poll.title}</h1>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-neutral-100 px-4">
+      <div className="w-full max-w-3xl bg-neutral-900 p-8 rounded-2xl shadow-lg border border-neutral-800">
+        <h1 className="text-4xl md:text-5xl mb-6 text-center tracking-wide text-blue-400" style={{ fontFamily: "var(--font-bebas)" }}>
+          {poll.title}
+        </h1>
 
-      {poll.poll_questions.map((q) => {
-        const selected = hasVotedMap[q.id];
-        return (
-          <div key={q.id} className="mb-6 border p-4 rounded shadow">
-            <h2 className="text-xl font-semibold mb-2">{q.question_title}</h2>
+        {poll.poll_questions.map((q) => {
+          const selected = hasVotedMap[q.id];
+          return (
+            <div key={q.id} className="mb-8">
+              <h2 className="text-2xl mb-4 text-white">{q.question_title}</h2>
 
-            {q.poll_options.map((opt) => {
-              const isSelected = selected === opt.id;
-              return (
-                <div
-                  key={opt.id}
-                  className="flex items-center justify-between border p-2 rounded mb-2"
-                >
-                  <span>
-                    {opt.text} ({opt.vote_count} votes)
-                  </span>
-                  <button
-                    onClick={() => vote(q.id, opt.id)}
-                    disabled={isSelected}
-                    className={`px-4 py-2 rounded ${
-                      isSelected
-                        ? "bg-gray-300 text-gray-700 cursor-not-allowed"
-                        : "bg-blue-500 text-white hover:bg-blue-600"
-                    }`}
-                  >
-                    {isSelected ? "Voted" : "Vote"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
+              <div className="space-y-4">
+                {q.poll_options.map((opt) => {
+                  const isSelected = selected === opt.id;
+                  return (
+                    <div key={opt.id} className="flex justify-between items-center bg-neutral-800 rounded p-3">
+                      <div>
+                        <p className="text-lg">{opt.text}</p>
+                        <p className="text-sm text-neutral-400">{opt.vote_count} votes</p>
+                      </div>
+                      <button
+                        onClick={() => vote(q.id, opt.id)}
+                        disabled={isSelected}
+                        className={`px-4 py-2 rounded text-white transition ${
+                          isSelected ? "bg-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                        }`}
+                      >
+                        {isSelected ? "Voted" : "Vote"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
 
-      <button
-        onClick={() => router.push("/")}
-        className="mt-4 bg-red-500 text-white px-4 py-2 rounded"
-      >
-        Back to Home
-      </button>
-    </div>
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => router.push("/")}
+            className="bg-rose-600 hover:bg-rose-700 px-6 py-3 text-white rounded-lg"
+          >
+            ← Back to Home
+          </button>
+        </div>
+      </div>
+    </main>
   );
 }

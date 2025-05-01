@@ -16,6 +16,16 @@ def generate_hex_code(length=6):
 # Register all app rounts and socket events
 def register_app_routes(app, db, socketio):
 
+    @app.route("/api/my_polls", methods=["GET"])
+    def get_my_polls():
+        client_id = request.cookies.get("client_id")
+        if not client_id:
+            return jsonify({"error": "Not authenticated"}), 403
+
+        polls = db.polls.find({"owner_id": client_id}, {"title": 1, "code": 1})
+        polls_list = [{"id": str(p["_id"]), "title": p["title"], "code": p["code"]} for p in polls]
+        return jsonify({"polls": polls_list})
+
     #Rount to assign a clients name
     @app.route("/api/set_name", methods=["POST"])
     def assign_client_name():
@@ -273,6 +283,7 @@ def register_app_routes(app, db, socketio):
             "voted_for": option_id,
             "vote_count": new_vote_count
         }), 200
+
 
     # SocketIO event listener to let a client join a specific poll's room for real-time updates
     @socketio.on("join_poll")

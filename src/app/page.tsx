@@ -2,73 +2,106 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useClient } from "./context/ClientContext";
+import { useClient } from "@/app/context/ClientContext";
 import apiClient from "@/app/lib/api";
-
-type Poll = { id: string; title: string; code: string };
 
 export default function HomePage() {
   const router = useRouter();
-  const { clientName, setShowPopup, socket } = useClient();
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { clientName, setShowPopup } = useClient();
 
-  const fetchPolls = () => {
+  const [pollCode, setPollCode] = useState("");
+  const [joinError, setJoinError] = useState("");
+
+  const handleJoinPoll = () => {
+    setJoinError("");
+    const trimmed = pollCode.trim().toUpperCase();
+
+    if (trimmed.length !== 6) {
+      setJoinError("Please enter a valid 6-character poll code.");
+      return;
+    }
+
     apiClient
-      .get("/api/polls")
-      .then(res => setPolls(res.data.polls))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .post(
+        "/api/join_poll",
+        { poll_code: trimmed },
+        { withCredentials: true }
+      )
+      .then((res) => {
+        const code = res.data.poll.code || trimmed;
+        router.push(`/poll/${code}`);
+      })
+      .catch((err) => {
+        console.error(err);
+        setJoinError("Poll not found or failed to join.");
+      });
   };
 
-  useEffect(fetchPolls, []);
-  useEffect(() => {
-    if (socket) socket.on("refreshPolls", fetchPolls);
-    return () => { if (socket) socket.off("refreshPolls", fetchPolls); };
-  }, [socket]);
-
-  if (loading) return <div className="p-4">Loading…</div>;
-
   return (
-    <main className="min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-4">Join a Poll</h1>
-      <p className="mb-4">Hello, {clientName || "Guest"}!</p>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-white px-4">
+      <div className="w-full max-w-2xl bg-neutral-900 p-8 rounded-2xl shadow-lg border border-neutral-800">
+        <h1
+          className="text-4xl md:text-5xl mb-4 text-center tracking-wide text-blue-400"
+          style={{ fontFamily: "var(--font-bebas)" }}
+        >
+          Join a Poll
+        </h1>
+        <p className="mb-6 text-center text-neutral-400">
+          Welcome,{" "}
+          <span className="text-white font-semibold">
+            {clientName || "Guest"}
+          </span>
+          !
+        </p>
 
-      <button
-        onClick={() => setShowPopup(true)}
-        className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
-      >
-        Change Name
-      </button>
+        <button
+          onClick={() => setShowPopup(true)}
+          className="mb-6 block mx-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+        >
+          Change Display Name
+        </button>
 
-      <div className="mt-6">
-        <h2 className="text-xl mb-2">Active Polls</h2>
-        {polls.length === 0 ? (
-          <p>No active polls.</p>
-        ) : (
-          <ul className="list-disc pl-5">
-            {polls.map(p => (
-              <li key={p.id} className="flex items-center mb-2">
-                <span className="mr-4 font-semibold">{p.title}</span>
-                <span className="mr-4 text-gray-500">Code: {p.code}</span>
-                <button
-                  onClick={() => router.push(`/poll/${p.code}`)}
-                  className="underline text-blue-500"
-                >
-                  Join Poll
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <h2 className="text-xl mb-4 text-center text-white">Enter Poll Code</h2>
+
+        <div className="flex flex-col items-center gap-4">
+          <input
+            type="text"
+            maxLength={6}
+            value={pollCode}
+            onChange={(e) => setPollCode(e.target.value.toUpperCase())}
+            placeholder="Enter 6-digit poll code (e.g. A1B2C3)"
+            className="w-full max-w-sm px-5 py-3 text-lg text-white bg-neutral-800 border border-gray-500 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          />
+
+          <button
+            onClick={handleJoinPoll}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
+          >
+            Join Poll
+          </button>
+          {joinError && (
+            <p className="text-red-500 text-sm text-center">{joinError}</p>
+          )}
+        </div>
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => router.push("/create")}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+          >
+            Create New Poll
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => router.push("/my-polls")}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+          >
+            View My Polls
+          </button>
+        </div>
       </div>
-
-      <button
-        onClick={() => router.push("/create")}
-        className="mt-4 bg-green-600 text-white px-4 py-2 rounded"
-      >
-        Create New Poll
-      </button>
     </main>
   );
 }
