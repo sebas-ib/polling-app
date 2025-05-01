@@ -35,23 +35,24 @@ export default function EnterPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-6 rounded shadow-md w-full max-w-md text-center">
-        <h1 className="text-2xl font-bold mb-4">Welcome to the Real-Time Polling App</h1>
-        <p className="flex flex-col items-center text-gray-600 mb-4">Enter your name to begin</p>
-        <div className="flex flex-col items-center">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-neutral-100 px-4">
+      <div className="w-full max-w-md bg-neutral-900 p-8 rounded-2xl shadow-xl border border-neutral-800">
+        <h1 className="text-4xl text-center tracking-wide text-blue-400 mb-6" style={{ fontFamily: "var(--font-bebas)" }}>
+          Welcome to Real-Time Polling</h1>
+        <p className="text-center text-sm text-neutral-400 mb-4">Enter your name to begin</p>
+        <div className="flex flex-col gap-4">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            className="border w-full p-2 mb-4"
+            className="p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           {/* Submit button to trigger name registration */}
           <button
             onClick={handleSubmit}
-            className="block w-full bg-blue-500 text-white px-4 py-2 rounded"
+            className="bg-emerald-500 hover:bg-emerald-600 transition px-4 py-2 rounded text-white"
           >
             Enter
           </button>

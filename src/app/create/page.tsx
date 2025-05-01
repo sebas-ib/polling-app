@@ -36,7 +36,7 @@ export default function CreatePollPage() {
       })
       .then((response) => {
         console.log("created poll: " );
-        router.push("/");
+        router.push("/menu");
       })
       .catch((error) => {
         console.error("Error calling /api/set_name:", error);
@@ -99,7 +99,7 @@ export default function CreatePollPage() {
             onClick={() => setOptions([...options, ""])}
             className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded text-white"
           >
-            ➕ Add Option
+            Add Option
           </button>
 
           <button
@@ -112,7 +112,7 @@ export default function CreatePollPage() {
 
           <div className="flex justify-between mt-4">
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/menu")}
               className="bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded text-white"
             >
               ← Back to Menu
@@ -121,7 +121,7 @@ export default function CreatePollPage() {
               onClick={() => alert("Feature coming soon!")}
               className="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white"
             >
-              ➕ Add Question
+              Add Question
             </button>
           </div>
         </div>

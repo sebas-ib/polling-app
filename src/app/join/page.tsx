@@ -21,30 +21,30 @@ export default function JoinPollPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-6 rounded shadow-md w-full max-w-md text-center">
-        <h1 className="flex flex-col items-center text-2xl font-bold mb-4">Join a Poll</h1>
-        <p className="flex flex-col items-center text-gray-600 mb-4">Enter your 4-digit poll code</p>
+    <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-neutral-100 px-4">
+      <div className="w-full max-w-md bg-neutral-900 p-8 rounded-2xl shadow-xl border border-neutral-800 text-center">
+        <h1 className="text-4xl tracking-wide text-blue-400 mb-4 uppercase"style={{ fontFamily: "var(--font-bebas)" }}>Join a Poll</h1>
+        <p className="text-neutral-400 mb-6 font-medium">Enter your 4-digit poll code</p>
         <div className="flex flex-col items-center gap-4 w-full">
           <input
             type="text"
-            maxLength={10}
+            maxLength={4}
             placeholder="e.g. 1234"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="border border-gray-300 rounded w-full p-2 text-center text-lg"
+            className="text-center text-lg p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           <button
             onClick={handleJoin}
-            className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 transition"
+            className="bg-emerald-500 hover:bg-emerald-600 transition px-4 py-2 rounded text-white w-full font-semibold"
           >
             Join Poll
           </button>
 
           <button
             onClick={() => router.push("/menu")}
-            className="text-gray-500 hover:underline text-sm"
+            className="text-neutral-400 hover:underline text-sm mt-2"
           >
             Back to Menu
           </button>
