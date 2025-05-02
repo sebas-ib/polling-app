@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node_modules/.bin/next dev --turbopack",
-    "build": "node_modules/.bin/next build",
-    "start": "node_modules/.bin/next start"
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
+    "autoprefixer": "^10.4.21",
     "axios": "^1.8.2",
     "chart.js": "^4.4.9",
     "chartjs-plugin-datalabels": "^2.2.0",
@@ -17,6 +18,7 @@
     "firebase-admin": "^13.2.0",
     "navigation": "^6.2.0",
     "next": "^15.2.1",
+    "postcss": "^8.5.3",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
@@ -24,12 +26,12 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.1.5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^7.0.3",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.1.5",
     "typescript": "^5"
   }
 }
