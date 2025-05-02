@@ -13,7 +13,6 @@ socketio = SocketIO(
     ]
 )
 
-
 # Initialize variables for the mongodb client and database
 mongo_client = None
 db = None
