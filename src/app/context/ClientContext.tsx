@@ -101,11 +101,12 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
 
   const handleSubmit = () => {
     if (!nameInput.trim()) return;
-    const formData = new FormData();
-    formData.append("client_name", nameInput);
+    const payload = new URLSearchParams({ client_name: nameInput });
 
-    apiClient
-      .post("/api/set_name", formData, { withCredentials: true })
+    apiClient.post("/api/set_name", payload, {
+  headers: {
+    "Content-Type": "application/x-www-form-urlencoded"
+  }})
       .then((res) => {
         if (res.data.Result === "Success") {
           setClientName(nameInput);
