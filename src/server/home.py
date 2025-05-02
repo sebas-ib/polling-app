@@ -15,6 +15,11 @@ def generate_hex_code(length=6):
 
 # Register all app rounts and socket events
 def register_app_routes(app, db, socketio):
+    @app.before_request
+    def log_origin():
+        print("Origin:", request.headers.get("Origin"))
+        print("Method:", request.method)
+        print("Path:", request.path)
 
     @app.route("/api/my_polls", methods=["GET"])
     def get_my_polls():
@@ -43,10 +48,10 @@ def register_app_routes(app, db, socketio):
             upsert=True
         )
 
-        # Send a responce and set cookies
+        # Send a response and set cookies
         response = make_response(jsonify({"client_name": client_name, "Result": "Success"}), 200)
-        response.set_cookie("client_id", client_id, httponly=True, samesite="Lax")
-        response.set_cookie("client_name", client_name, httponly=True, samesite="Lax")
+        response.set_cookie("client_id", client_id, httponly=True, samesite="None", secure=True)
+        response.set_cookie("client_name", client_name, httponly=True, samesite="None", secure=True)
         return response
 
     # Route to fetch client info using cookies or create a new one if not found
@@ -78,8 +83,8 @@ def register_app_routes(app, db, socketio):
             "client_name": client_name,
             "Result": "New Client"
         }))
-        response.set_cookie("client_id", client_id, httponly=True, samesite="Lax")
-        response.set_cookie("client_name", client_name, httponly=True, samesite="Lax")
+        response.set_cookie("client_id", client_id, httponly=True, samesite="None", secure=True)
+        response.set_cookie("client_name", client_name, httponly=True, samesite="None", secure=True)
         return response
 
     # Route to list all the polls, title, and unique code

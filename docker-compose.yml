@@ -4,6 +4,7 @@ services:
   backend:
     build:
       context: ./src/server
+    image: polling-app:latest
     ports:
       - "5001:5000"
     depends_on:
@@ -14,7 +15,9 @@ services:
       - PYTHONUNBUFFERED=1
 
   mongo:
-    image: 686728032722.dkr.ecr.us-west-2.amazonaws.com/mongo-polling:latest
+    build:
+      context: ./mongo
+    image: mongo-polling:latest
     ports:
       - "27017:27017"
     restart: always
