@@ -36,6 +36,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+    console.log("Frontend Origin:", window.location.origin)
+
       apiClient
         .get("/api/get_client", { withCredentials: true })
         .then((res) => {

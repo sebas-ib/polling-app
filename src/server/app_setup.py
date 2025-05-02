@@ -5,8 +5,13 @@ from pymongo import MongoClient
 from home import register_app_routes
 
 # Create a socketio instance
-socketio = SocketIO(cors_allowed_origins="*")
-# socketio = SocketIO(cors_allowed_origins=["https://polling-app-three.vercel.app"])
+# socketio = SocketIO(cors_allowed_origins="*")
+socketio = SocketIO(
+    cors_allowed_origins=[
+        "https://polling-app-git-main-polling-app-project.vercel.app",
+        "https://polling-app-cs-496-frontend.vercel.app"
+    ]
+)
 
 # Initialize variables for the mongodb client and database
 mongo_client = None
@@ -22,14 +27,16 @@ def create_app():
     app.config['SECRET_KEY'] = 'your_secret_key'
 
     # Enable CORS so frontend apps can make requests to the backend
-    CORS(app, supports_credentials=True)
-    # CORS(app, supports_credentials=True, origins=["https://polling-app-three.vercel.app"])
-
+    # CORS(app, supports_credentials=True)
+    CORS(app, supports_credentials=True, origins=[
+        "https://polling-app-git-main-polling-app-project.vercel.app",
+        "https://polling-app-cs-496-frontend.vercel.app"
+    ])
 
     # Connect to MongoDB running on docker service named mongo, timeout in case db is unresponsive
     global mongo_client, db
     mongo_client = MongoClient("mongodb://mongo:27017/", serverSelectionTimeoutMS=5000)
-    db = mongo_client["polling_app_db"] # Create or use existing database named polling_app_db
+    db = mongo_client["polling_app_db"]  # Create or use existing database named polling_app_db
 
     socketio.init_app(app)
 

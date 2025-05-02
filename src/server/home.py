@@ -13,6 +13,11 @@ def generate_hex_code(length=6):
 
 # Register all app routes and socket events
 def register_app_routes(app, db, socketio):
+    @app.before_request
+    def log_origin():
+        print("Origin:", request.headers.get("Origin"))
+        print("Method:", request.method)
+        print("Path:", request.path)
 
     @app.route("/api/my_polls", methods=["GET"])
     def get_my_polls():
@@ -38,13 +43,11 @@ def register_app_routes(app, db, socketio):
             upsert=True
         )
 
+
+        # Send a response and set cookies
         response = make_response(jsonify({"client_name": client_name, "Result": "Success"}), 200)
-
-        response.set_cookie("client_id", client_id, httponly=False, samesite="Lax")
-        response.set_cookie("client_name", client_name, httponly=False, samesite="Lax")
-
-        # response.set_cookie("client_id", client_id, httponly=False, secure = True, samesite = "None")
-        # response.set_cookie("client_name", client_name, httponly=False, secure = True, samesite = "None")
+        response.set_cookie("client_id", client_id, httponly=True, samesite="None", secure=True)
+        response.set_cookie("client_name", client_name, httponly=True, samesite="None", secure=True)
         return response
 
     @app.route("/api/get_client", methods=["GET"])
@@ -73,12 +76,10 @@ def register_app_routes(app, db, socketio):
             "client_name": client_name,
             "Result": "New Client"
         }))
-
-        # response.set_cookie("client_id", client_id, httponly=False, secure = True, samesite = "None")
-        # response.set_cookie("client_name", client_name, httponly=False, secure = True, samesite = "None")
-
-        response.set_cookie("client_id", client_id, httponly=False, samesite="Lax")
-        response.set_cookie("client_name", client_name, httponly=False, samesite="Lax")
+        
+        response.set_cookie("client_id", client_id, httponly=True, samesite="None", secure=True)
+        response.set_cookie("client_name", client_name, httponly=True, samesite="None", secure=True)
+        
         return response
 
     @app.route("/api/polls", methods=["GET"])

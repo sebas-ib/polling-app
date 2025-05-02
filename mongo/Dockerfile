@@ -1,0 +1,2 @@
+# ./mongo/Dockerfile
+FROM mongo
