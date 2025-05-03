@@ -1,27 +1,27 @@
-FROM node:18-alpine AS builder
+# Install dependencies
+FROM node:20-alpine AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-COPY package*.json ./
-RUN npm install
-
-# Copy the entire frontend code into /app
-COPY ./src/app ./src/app
-COPY tsconfig.json ./
-
-# Build inside the app directory
-WORKDIR /app/src/app
+# Build the app
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 RUN npm run build
 
-# Runtime container
-FROM node:18-alpine AS runner
+# Run the app
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Copy build output
-COPY --from=builder /app/src/app/.next ./.next
-COPY --from=builder /app/src/app/public ./public
-COPY package*.json ./
-RUN npm install --omit=dev
-
 ENV NODE_ENV=production
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.ts ./next.config.ts
+
 EXPOSE 3000
 CMD ["npm", "start"]
