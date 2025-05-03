@@ -22,7 +22,7 @@ services:
 
   frontend:
     build:
-      context: .
+      context: ./src
     image: polling-frontend:latest
     ports:
       - "3000:3000"

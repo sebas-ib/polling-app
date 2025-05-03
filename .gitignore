@@ -38,7 +38,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+src/next-env.d.ts
 
 # .gitignore
 __pycache__/
