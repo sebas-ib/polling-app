@@ -32,6 +32,12 @@ export default function CreatePollPage() {
     setQuestions(newQuestions);
   };
 
+  const removeQuestion = (index: number) => {
+    const updated = [...questions];
+    updated.splice(index, 1);
+    setQuestions(updated);
+  };
+
   const createPoll = async () => {
     if (!title.trim() || questions.some(q => !q.question_title.trim() || q.options.some(o => !o.trim()))) {
       alert("Please complete all questions and options.");
@@ -108,8 +114,18 @@ export default function CreatePollPage() {
                 onClick={() => updateQuestion(qi, "options", [...q.options, ""])}
                 className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded text-white"
               >
-                ➕ Add Option
+                Add Option
               </button>
+
+              {questions.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeQuestion(qi)}
+                  className="bg-red-600 hover:bg-red-700 transition px-4 py-2 rounded text-white"
+                >
+                  Remove Question
+                </button>
+              )}
             </div>
           ))}
 
@@ -117,7 +133,7 @@ export default function CreatePollPage() {
             onClick={addQuestion}
             className="bg-blue-700 hover:bg-blue-800 transition px-4 py-2 rounded text-white"
           >
-            ➕ Add Another Question
+            Add Another Question
           </button>
 
           <button
@@ -132,7 +148,7 @@ export default function CreatePollPage() {
             onClick={() => router.push("/")}
             className="mt-4 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded text-white"
           >
-            ← Back to Menu
+            Back to Menu
           </button>
         </div>
       </div>
