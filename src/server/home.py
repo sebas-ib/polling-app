@@ -46,8 +46,8 @@ def register_app_routes(app, db, socketio):
 
         # Send a response and set cookies
         response = make_response(jsonify({"client_name": client_name, "Result": "Success"}), 200)
-        response.set_cookie("client_id", client_id, httponly=True, samesite="None", secure=True)
-        response.set_cookie("client_name", client_name, httponly=True, samesite="None", secure=True)
+        response.set_cookie("client_id", client_id, httponly=True, samesite="Lax", secure=False)
+        response.set_cookie("client_name", client_name, httponly=True, samesite="Lax", secure=False)
         return response
 
     @app.route("/api/get_client", methods=["GET"])
@@ -76,9 +76,9 @@ def register_app_routes(app, db, socketio):
             "client_name": client_name,
             "Result": "New Client"
         }))
-        
-        response.set_cookie("client_id", client_id, httponly=True, samesite="None", secure=True)
-        response.set_cookie("client_name", client_name, httponly=True, samesite="None", secure=True)
+
+        response.set_cookie("client_id", client_id, httponly=True, samesite="Lax", secure=False)
+        response.set_cookie("client_name", client_name, httponly=True, samesite="Lax", secure=False)
         
         return response
 

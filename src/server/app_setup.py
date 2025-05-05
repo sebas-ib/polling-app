@@ -4,44 +4,39 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from home import register_app_routes
 
-# Create a socketio instance
-# socketio = SocketIO(cors_allowed_origins="*")
+# Create the socketio instance at the module level
 socketio = SocketIO(
     cors_allowed_origins=[
+        "http://localhost:3000",
         "https://polling-app-git-main-polling-app-project.vercel.app",
         "https://polling-app-cs-496-frontend.vercel.app"
     ]
 )
 
-# Initialize variables for the mongodb client and database
+# Initialize MongoDB global variables
 mongo_client = None
 db = None
 
 socket_clients = {}
 
 def create_app():
-    # Create a new flask app instance
     app = Flask(__name__)
-
-    # Secret key
     app.config['SECRET_KEY'] = 'your_secret_key'
 
-    # Enable CORS so frontend apps can make requests to the backend
-    # CORS(app, supports_credentials=True)
+    # Set up CORS
     CORS(app, supports_credentials=True, origins=[
+        "http://localhost:3000",
         "https://polling-app-git-main-polling-app-project.vercel.app",
         "https://polling-app-cs-496-frontend.vercel.app"
     ])
 
-    # Connect to MongoDB running on docker service named mongo, timeout in case db is unresponsive
-    global mongo_client, db
-    mongo_client = MongoClient("mongodb://mongo:27017/", serverSelectionTimeoutMS=5000)
-    db = mongo_client["polling_app_db"]  # Create or use existing database named polling_app_db
-
+    # Attach SocketIO to the app
     socketio.init_app(app)
 
-    # Pass in the app, database, and socket instance to the route registration function
+    global mongo_client, db
+    mongo_client = MongoClient("mongodb://mongo:27017/", serverSelectionTimeoutMS=5000)
+    db = mongo_client["polling_app_db"]
+
     register_app_routes(app, db, socketio)
 
-    # return the configured app
     return app
