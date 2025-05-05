@@ -45,3 +45,6 @@ __pycache__/
 *.pyc
 src/server/polling-app-882ec-firebase-adminsdk-fbsvc-9d68ebcb5a.json
 src/server/polling-app-882ec-firebase-adminsdk-fbsvc-b1eea8065e.json
+
+src/.next/
+src/node_modules/
