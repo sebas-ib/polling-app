@@ -5,19 +5,17 @@ import { useRouter, useParams } from "next/navigation";
 import apiClient from "@/app/lib/api";
 import { useClient } from "@/app/context/ClientContext";
 
-import { Bar } from "react-chartjs-2";
+import { Pie } from "react-chartjs-2";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
+  ArcElement,
   Tooltip,
   Legend,
 } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, ChartDataLabels);
+ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 
 type PollOption = { id: string; text: string; vote_count: number };
 type PollQuestion = {
@@ -197,6 +195,13 @@ export default function PollPage() {
           {poll.title}
         </h1>
 
+        <p className="text-center text-sm text-neutral-400 mb-6">
+          Join Code:{" "}
+          <span className="font-mono bg-neutral-800 px-2 py-1 rounded">
+            {pollCode}
+          </span>
+        </p>
+
         {poll.owner_id === clientId && (
           <div className="mt-4 text-center">
             <button
@@ -218,7 +223,7 @@ export default function PollPage() {
           );
 
           return (
-            <div key={q.id} className="mb-8">
+            <div key={q.id} className="mb-10">
               <h2 className="text-2xl mb-4 text-white">{q.question_title}</h2>
 
               <div className="space-y-4">
@@ -268,64 +273,42 @@ export default function PollPage() {
               </div>
 
               {(poll.show_results || poll.owner_id === clientId) && (
-                <div className="w-full h-64 mt-4 bg-neutral-800 rounded border border-neutral-700 p-2">
-                  <Bar
+                <div className="w-full h-80 mt-6 bg-neutral-800 rounded border border-neutral-700 p-4">
+                  <Pie
                     data={{
                       labels: q.poll_options.map((opt) => opt.text),
                       datasets: [
                         {
-                          label: "Vote %",
-                          data: q.poll_options.map((opt) =>
-                            totalVotes === 0
-                              ? 0
-                              : parseFloat(
-                                  ((opt.vote_count / totalVotes) * 100).toFixed(2)
-                                )
-                          ),
-                          backgroundColor: "rgba(59, 130, 246, 0.8)",
-                          borderColor: "rgba(30, 64, 175, 1)",
-                          borderWidth: 2,
-                          borderRadius: 5,
+                          label: "Votes",
+                          data: q.poll_options.map((opt) => opt.vote_count),
+                          backgroundColor: [
+                            "rgba(59, 130, 246, 0.8)",
+                            "rgba(16, 185, 129, 0.8)",
+                            "rgba(234, 179, 8, 0.8)",
+                            "rgba(244, 63, 94, 0.8)",
+                            "rgba(147, 51, 234, 0.8)",
+                            "rgba(251, 191, 36, 0.8)",
+                          ],
+                          borderColor: "#0f172a",
+                          borderWidth: 1,
                         },
                       ],
                     }}
                     options={{
-                      indexAxis: "y",
-                      maintainAspectRatio: false,
                       responsive: true,
                       plugins: {
-                        legend: { display: false },
+                        legend: {
+                          position: "right",
+                          labels: {
+                            color: "#ffffff",
+                          },
+                        },
                         datalabels: {
                           color: "#ffffff",
-                          anchor: "end",
-                          align: "start",
-                          offset: 10,
                           font: {
                             weight: "bold",
                           },
-                          formatter: (value, context) =>
-                            context.chart.data.labels?.[context.dataIndex],
-                        },
-                      },
-                      scales: {
-                        x: {
-                          beginAtZero: true,
-                          max: 100,
-                          ticks: {
-                            color: "#ffffff",
-                            callback: (value) => `${value}%`,
-                          },
-                          grid: {
-                            color: "#444",
-                          },
-                        },
-                        y: {
-                          ticks: {
-                            display: false,
-                          },
-                          grid: {
-                            color: "#444",
-                          },
+                          formatter: (value: number) => `${value} votes`,
                         },
                       },
                     }}
