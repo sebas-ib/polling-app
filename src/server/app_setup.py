@@ -8,7 +8,7 @@ from home import register_app_routes
 socketio = SocketIO(
     cors_allowed_origins=[
         "http://localhost:3000",
-        "http://54.196.101.219:3000",
+        "http://54.159.151.217:3000",
         "https://polling-app-production-ce51.up.railway.app"
     ]
 )
@@ -26,7 +26,7 @@ def create_app():
     # Set up CORS
     CORS(app, supports_credentials=True, origins=[
         "http://localhost:3000",
-        "http://54.196.101.219:3000",
+        "http://54.159.151.217:3000",
         "https://polling-app-production-ce51.up.railway.app"
     ])
 
