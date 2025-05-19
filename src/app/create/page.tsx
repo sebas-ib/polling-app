@@ -24,11 +24,7 @@ export default function CreatePollPage() {
 
   const updateQuestion = (i: number, key: "question_title" | "options", value: any) => {
     const newQuestions = [...questions];
-    if (key === "options") {
-      newQuestions[i][key] = value;
-    } else {
-      newQuestions[i][key] = value;
-    }
+    newQuestions[i][key] = value;
     setQuestions(newQuestions);
   };
 
@@ -61,32 +57,32 @@ export default function CreatePollPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-neutral-100 px-4">
-      <div className="w-full max-w-2xl bg-neutral-900 p-8 rounded-2xl shadow-lg border border-neutral-800">
-        <h1 className="text-4xl md:text-5xl mb-6 text-center tracking-wide text-blue-400" style={{ fontFamily: "var(--font-bebas)" }}>
-          CREATE A NEW POLL
+    <main className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111315] to-[#1c1c1c] text-white flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-3xl bg-[#16181c] border border-neutral-800 rounded-2xl shadow-2xl p-8">
+        <h1 className="text-4xl md:text-5xl font-bold text-center text-white mb-8">
+          Create a New Poll
         </h1>
 
-        <div className="flex flex-col gap-4">
+        <div className="space-y-6">
           <input
             type="text"
-            placeholder="Poll title"
+            placeholder="Poll Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 rounded-xl bg-[#222529] text-white placeholder-neutral-500 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           />
 
           {questions.map((q, qi) => (
-            <div key={qi} className="space-y-2">
+            <div key={qi} className="space-y-3 bg-[#1f1f22] p-4 rounded-xl border border-neutral-700">
               <input
                 type="text"
                 placeholder={`Question ${qi + 1}`}
                 value={q.question_title}
                 onChange={(e) => updateQuestion(qi, "question_title", e.target.value)}
-                className="p-3 w-full rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 rounded-xl bg-[#222529] text-white placeholder-neutral-500 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
               {q.options.map((opt, oi) => (
-                <div key={oi} className="flex gap-2">
+                <div key={oi} className="flex gap-2 items-center">
                   <input
                     type="text"
                     placeholder={`Option ${oi + 1}`}
@@ -96,42 +92,43 @@ export default function CreatePollPage() {
                       opts[oi] = e.target.value;
                       updateQuestion(qi, "options", opts);
                     }}
-                    className="flex-1 p-3 rounded bg-neutral-800 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 p-3 rounded-xl bg-[#222529] text-white placeholder-neutral-500 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   />
                   {q.options.length > 2 && (
                     <button
                       type="button"
                       onClick={() => updateQuestion(qi, "options", q.options.filter((_, i) => i !== oi))}
-                      className="px-3 bg-rose-600 hover:bg-rose-700 text-white rounded"
+                      className="px-3 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition"
                     >
                       ✕
                     </button>
                   )}
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={() => updateQuestion(qi, "options", [...q.options, ""])}
-                className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded text-white"
-              >
-                Add Option
-              </button>
-
-              {questions.length > 1 && (
+              <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => removeQuestion(qi)}
-                  className="bg-red-600 hover:bg-red-700 transition px-4 py-2 rounded text-white"
+                  onClick={() => updateQuestion(qi, "options", [...q.options, ""])}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm rounded-xl transition"
                 >
-                  Remove Question
+                  Add Option
                 </button>
-              )}
+                {questions.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeQuestion(qi)}
+                    className="bg-red-600 hover:bg-red-700 px-4 py-2 text-sm rounded-xl transition"
+                  >
+                    Remove Question
+                  </button>
+                )}
+              </div>
             </div>
           ))}
 
           <button
             onClick={addQuestion}
-            className="bg-blue-700 hover:bg-blue-800 transition px-4 py-2 rounded text-white"
+            className="w-full bg-blue-700 hover:bg-blue-800 px-4 py-3 rounded-xl text-white transition"
           >
             Add Another Question
           </button>
@@ -139,14 +136,14 @@ export default function CreatePollPage() {
           <button
             onClick={createPoll}
             disabled={loading}
-            className="bg-emerald-500 hover:bg-emerald-600 transition px-4 py-2 rounded text-white disabled:opacity-50"
+            className="w-full bg-emerald-500 hover:bg-emerald-600 px-4 py-3 rounded-xl text-white font-semibold transition disabled:opacity-50"
           >
             {loading ? "Creating Poll..." : "Create Poll"}
           </button>
 
           <button
             onClick={() => router.push("/")}
-            className="mt-4 bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded text-white"
+            className="w-full mt-4 bg-neutral-700 hover:bg-neutral-600 px-4 py-3 rounded-xl text-white transition"
           >
             Back to Menu
           </button>

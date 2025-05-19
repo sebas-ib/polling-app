@@ -7,7 +7,6 @@ import { useClient } from "@/app/context/ClientContext";
 
 import { Pie } from "react-chartjs-2";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-
 import {
   Chart as ChartJS,
   ArcElement,
@@ -30,6 +29,7 @@ type PollData = {
   participants: string[];
   owner_id: string;
   show_results: boolean;
+  voting_locked: boolean;
 };
 
 export default function PollPage() {
@@ -41,19 +41,23 @@ export default function PollPage() {
   const [hasVotedMap, setHasVotedMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
+  const handleToggleVotingLock = async () => {
+    const res = await apiClient.post("/api/toggle_voting_lock", {
+      poll_id: poll?.id,
+    });
+    setPoll((prev) =>
+      prev ? { ...prev, voting_locked: res.data.voting_locked } : prev
+    );
+  };
+
   const handleToggleResults = async () => {
     if (!poll) return;
-
-    try {
-      const res = await apiClient.post("/api/toggle_results", {
-        poll_id: poll.id,
-      });
-
-      const { show_results } = res.data;
-      setPoll((prev) => (prev ? { ...prev, show_results } : prev));
-    } catch (err) {
-      console.error("Failed to toggle results visibility:", err);
-    }
+    const res = await apiClient.post("/api/toggle_results", {
+      poll_id: poll.id,
+    });
+    setPoll((prev) =>
+      prev ? { ...prev, show_results: res.data.show_results } : prev
+    );
   };
 
   useEffect(() => {
@@ -75,30 +79,19 @@ export default function PollPage() {
   useEffect(() => {
     if (!socket || !poll) return;
 
-    const toggleHandler = (data: { poll_id: string; show_results: boolean }) => {
-      if (data.poll_id !== poll.id) return;
+    socket.on("toggle_results_event", (data: { poll_id: string; show_results: boolean }) => {
+      if (data.poll_id === poll.id) {
+        setPoll((prev) => (prev ? { ...prev, show_results: data.show_results } : prev));
+      }
+    });
 
-      setPoll((prev) =>
-        prev ? { ...prev, show_results: data.show_results } : prev
-      );
-    };
+    socket.on("lock_poll_event", (data: { poll_id: string; voting_locked: boolean }) => {
+      if (data.poll_id === poll.id) {
+        setPoll((prev) => (prev ? { ...prev, voting_locked: data.voting_locked } : prev));
+      }
+    });
 
-    socket.on("toggle_results_event", toggleHandler);
-    return () => {
-      socket.off("toggle_results_event", toggleHandler);
-    };
-  }, [socket, poll]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handler = (data: {
-      question_id: string;
-      vote_sent_by: string;
-      client_id: string;
-      new_vote?: { option_id: string; vote_count: number };
-      old_vote?: { option_id: string; vote_count: number | null };
-    }) => {
+    socket.on("vote_event", (data: any) => {
       const { question_id, new_vote, old_vote, client_id: voteClientId } = data;
       if (!new_vote) return;
 
@@ -112,16 +105,10 @@ export default function PollPage() {
                   : {
                       ...q,
                       poll_options: q.poll_options.map((opt) => {
-                        if (opt.id === new_vote.option_id) {
+                        if (opt.id === new_vote.option_id)
                           return { ...opt, vote_count: new_vote.vote_count };
-                        }
-                        if (
-                          old_vote &&
-                          old_vote.option_id === opt.id &&
-                          old_vote.vote_count !== null
-                        ) {
+                        if (old_vote?.option_id === opt.id)
                           return { ...opt, vote_count: old_vote.vote_count };
-                        }
                         return opt;
                       }),
                     }
@@ -136,29 +123,29 @@ export default function PollPage() {
           [question_id]: new_vote.option_id,
         }));
       }
-    };
+    });
 
-    socket.on("vote_event", handler);
     return () => {
-      socket.off("vote_event", handler);
+      socket.off("toggle_results_event");
+      socket.off("lock_poll_event");
+      socket.off("vote_event");
     };
-  }, [socket, clientId]);
+  }, [socket, poll, clientId]);
 
   const vote = (qId: string, newOptId: string) => {
+    if (!poll || poll.voting_locked) return;
     const prevOptId = hasVotedMap[qId];
     if (prevOptId === newOptId) return;
 
     apiClient
-      .post("/api/vote_option", [
-        { poll_id: poll!.id, question_id: qId, option_id: newOptId },
-      ])
+      .post("/api/vote_option", [{ poll_id: poll.id, question_id: qId, option_id: newOptId }])
       .catch(console.error);
 
-    setPoll((p) =>
-      p
+    setPoll((prev) =>
+      prev
         ? {
-            ...p,
-            poll_questions: p.poll_questions.map((q) =>
+            ...prev,
+            poll_questions: prev.poll_questions.map((q) =>
               q.id !== qId
                 ? q
                 : {
@@ -176,104 +163,109 @@ export default function PollPage() {
                   }
             ),
           }
-        : p
+        : prev
     );
 
-    setHasVotedMap((m) => ({ ...m, [qId]: newOptId }));
+    setHasVotedMap((prev) => ({ ...prev, [qId]: newOptId }));
   };
 
   if (loading) return <div className="p-4">Loading…</div>;
   if (!poll) return <div className="p-4">Poll not found.</div>;
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0d1117] via-[#0b1b26] to-[#0f172a] text-neutral-100 px-4">
-      <div className="w-full max-w-3xl bg-neutral-900 p-8 rounded-2xl shadow-lg border border-neutral-800">
-        <h1
-          className="text-4xl md:text-5xl mb-6 text-center tracking-wide text-blue-400"
-          style={{ fontFamily: "var(--font-bebas)" }}
-        >
+    <main className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111315] to-[#1c1c1c] text-white px-4 py-10 flex items-center justify-center">
+      <div className="w-full max-w-4xl bg-[#16181c] border border-neutral-800 rounded-2xl shadow-2xl p-8">
+        <h1 className="text-4xl md:text-5xl font-bold text-center text-white mb-6">
           {poll.title}
         </h1>
 
-        <p className="text-center text-sm text-neutral-400 mb-6">
+        <p className="text-center text-neutral-400 text-sm mb-6">
           Join Code:{" "}
-          <span className="font-mono bg-neutral-800 px-2 py-1 rounded">
+          <span className="font-mono bg-[#1f1f22] text-white px-2 py-1 rounded-lg">
             {pollCode}
           </span>
         </p>
 
         {poll.owner_id === clientId && (
-          <div className="mt-4 text-center">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
             <button
               onClick={handleToggleResults}
-              className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-white rounded"
+              className="bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-white rounded-xl transition"
             >
-              {poll.show_results
-                ? "Hide Results from Others"
-                : "Show Results to Others"}
+              {poll.show_results ? "Hide Results from Others" : "Show Results to Others"}
+            </button>
+
+            <button
+              onClick={handleToggleVotingLock}
+              className="bg-yellow-600 hover:bg-yellow-700 px-5 py-2 text-white rounded-xl transition"
+            >
+              {poll.voting_locked ? "Unlock Voting" : "Lock Voting"}
             </button>
           </div>
         )}
 
         {poll.poll_questions.map((q) => {
           const selected = hasVotedMap[q.id];
-          const totalVotes = q.poll_options.reduce(
-            (sum, opt) => sum + opt.vote_count,
-            0
-          );
+          const totalVotes = q.poll_options.reduce((sum, opt) => sum + opt.vote_count, 0);
 
           return (
-            <div key={q.id} className="mb-10">
-              <h2 className="text-2xl mb-4 text-white">{q.question_title}</h2>
+            <div key={q.id} className="mb-12">
+              <h2 className="text-2xl font-semibold mb-4">{q.question_title}</h2>
 
               <div className="space-y-4">
                 {q.poll_options.map((opt) => {
                   const isSelected = selected === opt.id;
+                  const percent =
+                    totalVotes === 0 ? 0 : (opt.vote_count / totalVotes) * 100;
+
                   return (
                     <div
                       key={opt.id}
-                      className="relative w-full bg-neutral-800 rounded overflow-hidden"
+                      className="relative w-full bg-[#222529] border border-neutral-700 rounded-xl overflow-hidden"
                     >
-                      {/* Blue percentage fill */}
                       {(poll.show_results || poll.owner_id === clientId) && (
                         <div
                           className="absolute top-0 left-0 h-full bg-blue-600 transition-all duration-500"
-                          style={{
-                            width:
-                              totalVotes === 0
-                                ? "0%"
-                                : `${(opt.vote_count / totalVotes) * 100}%`,
-                          }}
+                          style={{ width: `${percent}%` }}
                         />
                       )}
 
-                      {/* Green selection indicator */}
                       {isSelected && (
                         <div className="absolute top-0 right-0 h-full w-2 bg-green-500" />
                       )}
 
-                      {/* Actual button content */}
-                      <button
-                        onClick={() => vote(q.id, opt.id)}
-                        disabled={isSelected}
-                        className="relative w-full text-left px-4 py-3 z-10 text-white"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-medium">{opt.text}</span>
-                          {(poll.show_results || poll.owner_id === clientId) && (
-                            <span className="text-sm text-white opacity-80">
-                              {opt.vote_count} votes
-                            </span>
-                          )}
+                      {!poll.voting_locked ? (
+                        <button
+                          onClick={() => vote(q.id, opt.id)}
+                          disabled={isSelected}
+                          className="relative w-full text-left px-4 py-3 z-10 text-white"
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-medium">{opt.text}</span>
+                            {(poll.show_results || poll.owner_id === clientId) && (
+                              <span className="text-sm text-white opacity-80">
+                                {opt.vote_count} vote{opt.vote_count !== 1 && "s"}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ) : (
+                        <div className="relative w-full px-4 py-3 z-10 text-white opacity-60 cursor-not-allowed">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-medium">{opt.text}</span>
+                            {(poll.show_results || poll.owner_id === clientId) && (
+                              <span className="text-sm">{opt.vote_count} votes</span>
+                            )}
+                          </div>
                         </div>
-                      </button>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
               {(poll.show_results || poll.owner_id === clientId) && (
-                <div className="w-full h-80 mt-6 bg-neutral-800 rounded border border-neutral-700 p-4">
+                <div className="w-full h-80 mt-6 bg-[#1f1f22] rounded-xl border border-neutral-700 p-4">
                   <Pie
                     data={{
                       labels: q.poll_options.map((opt) => opt.text),
@@ -299,16 +291,12 @@ export default function PollPage() {
                       plugins: {
                         legend: {
                           position: "right",
-                          labels: {
-                            color: "#ffffff",
-                          },
+                          labels: { color: "#ffffff" },
                         },
                         datalabels: {
                           color: "#ffffff",
-                          font: {
-                            weight: "bold",
-                          },
-                          formatter: (value: number) => `${value} votes`,
+                          font: { weight: "bold" },
+                          formatter: (value: number) => `${value} vote${value !== 1 ? "s" : ""}`,
                         },
                       },
                     }}
@@ -322,7 +310,7 @@ export default function PollPage() {
         <div className="mt-8 text-center">
           <button
             onClick={() => router.push("/")}
-            className="bg-rose-600 hover:bg-rose-700 px-6 py-3 text-white rounded-lg"
+            className="bg-rose-600 hover:bg-rose-700 px-6 py-3 text-white rounded-xl transition"
           >
             ← Back to Home
           </button>

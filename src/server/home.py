@@ -35,18 +35,15 @@ def register_app_routes(app, db, socketio):
         client_name = request.form.get("client_name") or "Anonymous"
 
         if not client_id:
-            client_id = str(uuid.uuid4())
+            return jsonify({"error": "Client ID missing. Cannot set name."}), 403
 
         db.clients.update_one(
             {"_id": client_id},
-            {"$set": {"name": client_name, "saved_votes": {}}},
+            {"$set": {"name": client_name}},
             upsert=True
         )
 
-
-        # Send a response and set cookies
         response = make_response(jsonify({"client_name": client_name, "Result": "Success"}), 200)
-        response.set_cookie("client_id", client_id, httponly=True, samesite="Lax", secure=False)
         response.set_cookie("client_name", client_name, httponly=True, samesite="Lax", secure=False)
         return response
 
@@ -125,7 +122,8 @@ def register_app_routes(app, db, socketio):
             "owner_id": client_id,
             "poll_questions": poll_questions,
             "participants": [client_id],
-            "show_results": False
+            "show_results": False,
+            "voting_locked": False
         }
 
         inserted = db.polls.insert_one(poll_data)
@@ -133,6 +131,30 @@ def register_app_routes(app, db, socketio):
 
         socketio.emit("refreshPolls", {"id": poll_id, "title": poll_title})
         return jsonify({"id": poll_id, "title": poll_title, "code": hex_code}), 201
+
+    @app.route("/api/toggle_voting_lock", methods=["POST"])
+    def toggle_voting_lock():
+        client_id = request.cookies.get("client_id")
+        poll_id = request.json.get("poll_id")
+
+        poll = db.polls.find_one({"_id": ObjectId(poll_id)})
+        if not poll:
+            return "Poll not found", 404
+        if poll["owner_id"] != client_id:
+            return "Unauthorized", 403
+
+        new_lock_status = not poll.get("voting_locked", False)
+        db.polls.update_one(
+            {"_id": ObjectId(poll_id)},
+            {"$set": {"voting_locked": new_lock_status}}
+        )
+
+        socketio.emit("lock_poll_event", {
+            "poll_id": poll_id,
+            "voting_locked": new_lock_status
+        }, room=poll_id)
+
+        return jsonify({"voting_locked": new_lock_status})
 
     @app.route("/api/toggle_results", methods=["POST"])
     def toggle_results():
@@ -215,6 +237,9 @@ def register_app_routes(app, db, socketio):
         client = db.clients.find_one({"_id": client_id})
         if not client:
             return jsonify({"error": "Client not found"}), 403
+
+        if poll.get("voting_locked", False):
+            return jsonify({"error": "Voting is locked"}), 403
 
         saved_votes = client.get("saved_votes", {})
         previous_option_id = saved_votes.get(question_id)

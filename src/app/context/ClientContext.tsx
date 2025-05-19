@@ -36,7 +36,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-    console.log("Frontend Origin:", window.location.origin)
+      console.log("Frontend Origin:", window.location.origin);
 
       apiClient
         .get("/api/get_client", { withCredentials: true })
@@ -103,10 +103,12 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
     if (!nameInput.trim()) return;
     const payload = new URLSearchParams({ client_name: nameInput });
 
-    apiClient.post("/api/set_name", payload, {
-  headers: {
-    "Content-Type": "application/x-www-form-urlencoded"
-  }})
+    apiClient
+      .post("/api/set_name", payload, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      })
       .then((res) => {
         if (res.data.Result === "Success") {
           setClientName(nameInput);
@@ -122,19 +124,19 @@ function ClientNamePopup({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      <div className="bg-neutral-900 p-8 rounded-xl shadow-lg w-full max-w-md text-white">
-        <h2 className="text-2xl font-bold mb-4 text-center">Enter Your Name</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#16181c] p-8 rounded-2xl shadow-2xl w-full max-w-md text-white border border-neutral-800">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Enter Your Name</h2>
         <input
           type="text"
           placeholder="Your display name"
           value={nameInput}
           onChange={(e) => setNameInput(e.target.value)}
-          className="w-full p-3 mb-4 rounded bg-neutral-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 mb-4 text-lg rounded-xl bg-[#222529] text-white placeholder-neutral-500 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
         />
         <button
           onClick={handleSubmit}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold"
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-semibold transition"
         >
           Submit
         </button>
