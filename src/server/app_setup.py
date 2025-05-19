@@ -9,8 +9,7 @@ socketio = SocketIO(
     cors_allowed_origins=[
         "http://localhost:3000",
         "http://54.196.101.219:3000",
-        "https://polling-app-git-main-polling-app-project.vercel.app",
-        "https://polling-app-cs-496-frontend.vercel.app"
+        "https://polling-app-production-ce51.up.railway.app/"
     ]
 )
 
@@ -28,8 +27,7 @@ def create_app():
     CORS(app, supports_credentials=True, origins=[
         "http://localhost:3000",
         "http://54.196.101.219:3000",
-        "https://polling-app-git-main-polling-app-project.vercel.app",
-        "https://polling-app-cs-496-frontend.vercel.app"
+        "https://polling-app-production-ce51.up.railway.app/"
     ])
 
     # Attach SocketIO to the app
