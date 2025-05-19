@@ -32,7 +32,12 @@ def register_app_routes(app, db, socketio):
     @app.route("/api/set_name", methods=["POST"])
     def assign_client_name():
         client_id = request.cookies.get("client_id")
-        client_name = request.form.get("client_name") or "Anonymous"
+
+        if request.is_json:
+            data = request.get_json()
+            client_name = data.get("client_name", "Anonymous")
+        else:
+            client_name = request.form.get("client_name") or "Anonymous"
 
         if not client_id:
             return jsonify({"error": "Client ID missing. Cannot set name."}), 403
