@@ -2,10 +2,6 @@
 
 A full-stack web application that allows users to create and participate in real-time polls. Built with Next.js, TypeScript, Tailwind CSS, and MongoDB, this app offers a seamless and responsive user experience.
 
-## Live Demo
-
-Try it out: http://54.159.151.217:3000
-
 ## Features
 
 - **Real-Time Voting** — Results update instantly across clients
